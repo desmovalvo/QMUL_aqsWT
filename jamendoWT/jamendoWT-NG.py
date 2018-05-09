@@ -25,6 +25,7 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("jamendoWT.conf")
     clientID = config["Jamendo"]["clientId"]
+    searchLimit = config["Jamendo"]["limit"]
 
     # create a new KP
     kp = SEPAClient(None, 40)
@@ -82,7 +83,7 @@ if __name__ == "__main__":
                             {"thingURI": " <%s> " % thingURI,
                              "thingDescURI": " <%s> " % thingDescURI,
                              "actionURI": " <%s> " % actionURI })
-    kp.subscribe(ysap.subscribeURI, subText, "actions", JamHandler(kp, ysap, clientID))
+    kp.subscribe(ysap.subscribeURI, subText, "actions", JamHandler(kp, ysap, clientID, searchLimit))
 
     ##############################################################
     #

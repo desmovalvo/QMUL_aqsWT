@@ -56,7 +56,7 @@ class ActHandler:
                     # TODO - we use a temporary n3 file.. change it
                     songName = r["audioFile"]["value"]
                     songUri = r["audioClip"]["value"]
-                    subprocess.run(["sonic-annotator", "-t", "/home/val/QMUL/examples/ex01_sonicAnnotator/ampFoll", songName, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q", "--rdf-track-uri", songUri])        
+                    subprocess.run(["sonic-annotator", "-t", "/home/val/QMUL/examples/ex01_sonicAnnotator/ampFoll", songName, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q", "--rdf-track-uri", songUri, "--segments", "0,5"])        
                     logging.debug("ActionHandker::handle() -- writing results")
 
                     # read the file ".n3" and put everything into the named graph

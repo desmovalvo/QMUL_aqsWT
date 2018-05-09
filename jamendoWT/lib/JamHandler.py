@@ -6,11 +6,11 @@ import logging
 import requests
 
 # constants
-NAMESEARCH_URL = "http://api.jamendo.com/v3.0/tracks?client_id=%s&fuzzytags=%s"
+NAMESEARCH_URL = "http://api.jamendo.com/v3.0/tracks?client_id=%s&fuzzytags=%s&limit=%s"
 
 class JamHandler:
 
-    def __init__(self, kp, ysap, clientID):
+    def __init__(self, kp, ysap, clientID, limit):
 
         # initialize the logging system
         logger = logging.getLogger('jamendoWT')
@@ -22,6 +22,7 @@ class JamHandler:
         self.counter = 0
         self.ysap = ysap
         self.kp = kp
+        self.limit = limit
 
 
     def handle(self, added, removed):
@@ -74,7 +75,7 @@ class JamHandler:
                 ##############################################################    
             
                 searchPattern = "+".join(inputData["tags"])
-                r = requests.get(NAMESEARCH_URL % (self.clientID, searchPattern))
+                r = requests.get(NAMESEARCH_URL % (self.clientID, searchPattern, self.limit))
                 logging.info("Asking Jamendo for songs matching %s" % searchPattern)
                 res = json.loads(r.text)
 
