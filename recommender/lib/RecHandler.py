@@ -9,7 +9,7 @@ from uuid import uuid4
 
 class SearchHandler:
 
-    def __init__(self, kp, ysap, waitValue):
+    def __init__(self, kp, ysap, waitValue, instance):
 
         # initialize the logging system
         logger = logging.getLogger('recommenderWT')
@@ -21,6 +21,7 @@ class SearchHandler:
         self.ysap = ysap
         self.kp = kp
         self.waitValue = waitValue
+        self.instance = instance
 
     def handle(self, added, removed):
 
@@ -45,6 +46,11 @@ class SearchHandler:
 
             # debug message
             logging.info("JamendoWT completed its task!")
+
+            # delete action request
+            # self.kp.update(self.ysap.updateURI, self.ysap.getUpdate("DELETE_REQUEST", {"instance": " <%s> " % self.instance}))
+            
+            # set waiting to False
             self.waitValue = False
 
         self.counter += 1
@@ -52,7 +58,7 @@ class SearchHandler:
 
 class SonicHandler:
 
-    def __init__(self, kp, ysap, waitValue):
+    def __init__(self, kp, ysap, waitValue, instance):
 
         # initialize the logging system
         logger = logging.getLogger('recommenderWT')
@@ -64,6 +70,7 @@ class SonicHandler:
         self.ysap = ysap
         self.kp = kp
         self.waitValue = waitValue
+        self.instance = instance
 
     def handle(self, added, removed):
 
@@ -88,6 +95,11 @@ class SonicHandler:
 
             # debug message
             logging.info("SonicWT completed its task!")
+
+            # delete action request
+            # self.kp.update(self.ysap.updateURI, self.ysap.getUpdate("DELETE_REQUEST", {"instance": " <%s> " % self.instance}))
+            
+            # set waiting to False
             self.waitValue = False
 
         self.counter += 1
@@ -140,7 +152,8 @@ class RecHandler:
         else:
             
             # debug message
-            logging.info("Recommendation request #%s" % self.counter)
+            if len(added) > 0:
+                logging.info("Recommendation request #%s" % self.counter)
             
             # cycle over added bindings
             for a in added:
@@ -154,7 +167,7 @@ class RecHandler:
                 waitValue = True
                 jamendoInstance = self.ysap.getNamespace("qmul") + str(uuid4())
                 subText = self.ysap.getQuery("ACTION_COMPLETION_TIME", {"instance": " <%s> " % jamendoInstance})
-                s =  SearchHandler(self.kp, self.ysap, waitValue)
+                s =  SearchHandler(self.kp, self.ysap, waitValue, jamendoInstance)
                 subid = self.kp.subscribe(self.ysap.subscribeURI, subText, "jamendo output", s)
                 
                 # invoke the jamendo web thing
@@ -173,7 +186,7 @@ class RecHandler:
                 waitValue = True
                 sonicInstance = self.ysap.getNamespace("qmul") + str(uuid4())
                 subText = self.ysap.getQuery("ACTION_COMPLETION_TIME", {"instance": " <%s> " % sonicInstance})
-                s =  SonicHandler(self.kp, self.ysap, waitValue)
+                s =  SonicHandler(self.kp, self.ysap, waitValue, sonicInstance)
                 subid = self.kp.subscribe(self.ysap.subscribeURI, subText, "sonic output", s)
                     
                 # invoke sonic annotator web thing

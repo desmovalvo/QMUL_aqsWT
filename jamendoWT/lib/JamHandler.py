@@ -92,7 +92,7 @@ class JamHandler:
                     triples.append(" <%s> dc:title '%s' " % (r["shorturl"], r["name"].replace("'", "")))
                     triples.append(" <%s> ac:available_as <%s>  " % (r["shorturl"], r["audiodownload"]))
                     triples.append(" <%s> rdf:type ac:AudioFile " % r["audiodownload"])
-                    logging.info(r["name"])
+                    logging.info(r["name"] + " -- by: " + r["artist_name"])
                 tl = ".".join(triples)
 
                 # put results into SEPA

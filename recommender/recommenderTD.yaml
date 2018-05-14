@@ -180,7 +180,6 @@ updates:
       dataValue: "literal"
       graphURI: "uri"
 
-
   INSERT_SONIC_REQUEST:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
              PREFIX wot: <http://wot.arces.unibo.it/sepa#> 
@@ -205,32 +204,30 @@ updates:
       instance: "uri"
       graphURI: "uri"
 
-      
-  DELETE_SEARCH_REQUEST:
+  DELETE_REQUEST:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
              PREFIX wot: <http://wot.arces.unibo.it/sepa#> 
-             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
              PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> 
              DELETE { 
                ?actionURI wot:hasInstance ?instance . 
-               ?instance wot:hasRequestTimeStamp ?request . 
+               ?instance wot:hasRequestTimeStamp ?requestTS . 
+               ?instance wot:hasCompletionTimestamp ?completionTS .
                ?instance rdf:type wot:ActionInstance .  
                ?instance wot:hasInputData ?inputData . 
                ?inputData dul:hasDataValue ?dataValue .
                ?instance wot:hasOutputData ?outputData .
-               GRAPH ?outputData { ?s ?p ?o }
-             } 
+               } 
              WHERE {
+               ?actionURI rdf:type wot:Action . 
                ?actionURI wot:hasInstance ?instance . 
-               ?instance wot:hasRequestTimeStamp ?request . 
+               ?instance wot:hasRequestTimeStamp ?requestTS . 
+               ?instance wot:hasCompletionTimestamp ?completionTS .
                ?instance rdf:type wot:ActionInstance .  
-               ?instance wot:hasInputData ?inputData . 
                ?inputData dul:hasDataValue ?dataValue .
                ?instance wot:hasOutputData ?outputData .
-               GRAPH ?outputData { ?s ?p ?o }
-             }"
+               }"
     forcedBindings:
-      instance: "uri"
+      instance: "uri" 
 
 queries:
 
