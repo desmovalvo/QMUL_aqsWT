@@ -9,6 +9,7 @@ import time
 import vamp
 import logging
 import subprocess
+import configparser
 from sepy.YSAPObject import *
 from sepy.SEPAClient import *
 
@@ -33,6 +34,11 @@ if __name__ == "__main__":
     kp = SEPAClient(None, 40)
     ysap = YSAPObject(CONFIG_FILE, 40)
 
+    # read freesound key
+    config = configparser.ConfigParser()
+    config.read("sonic.conf")
+    clientID = config["Freesound"]["clientId"]
+    
     ##############################################################
     #
     # Put TD into SEPA
@@ -79,7 +85,7 @@ if __name__ == "__main__":
                             {"thingURI": " <%s> " % thingURI,
                              "thingDescURI": " <%s> " % thingDescURI,
                              "actionURI": " <%s> " % actionURI })
-    kp.subscribe(ysap.subscribeURI, subText, "actions", ActHandler(kp, ysap))
+    kp.subscribe(ysap.subscribeURI, subText, "actions", ActHandler(kp, ysap, clientID))
 
     # # 7 - subscribe to action requests
     # wt.waitForActions(ActionHandler)

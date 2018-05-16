@@ -144,7 +144,7 @@ updates:
             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-            PREFIX dc: <http://purl.org/dc/elements/1.1>
+            PREFIX dc: <http://purl.org/dc/elements/1.1/>
             PREFIX ac: <http://audiocommons.org/ns/audiocommons#>
             INSERT { 
               ?instanceURI wot:hasCompletionTimestamp ?time .

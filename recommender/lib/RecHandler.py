@@ -34,7 +34,7 @@ class SearchHandler:
         if (self.counter == 0):
 
             # debug message
-            logging.info("Subscription to jamendo output correctly initialized")
+            logging.info("Subscription to completion of search action output correctly initialized")
 
         ##############################################################
         #
@@ -45,7 +45,7 @@ class SearchHandler:
         else:
 
             # debug message
-            logging.info("JamendoWT completed its task!")
+            logging.info("Search action completed!")
 
             # delete action request
             # self.kp.update(self.ysap.updateURI, self.ysap.getUpdate("DELETE_REQUEST", {"instance": " <%s> " % self.instance}))
@@ -113,14 +113,11 @@ class RecHandler:
         logger = logging.getLogger('recommenderWT')
         logging.basicConfig(format='[%(levelname)s] %(message)s', level=logging.DEBUG)
         logging.debug("Logging subsystem initialized for RecHandler")
-        
-        # initialize URIs of jamendo
-        # TODO - this should be discovered automatically
-        self.jamendoThingURI = ysap.getNamespace("qmul") + "JamendoWT"
-        self.jamendoActionURI = ysap.getNamespace("qmul") + "searchAction"
 
-        # initalize URIs of sonic
-        # TODO - this should be discovered automatically
+        # initialize URI for search actions
+        self.searchActionURI = ysap.getNamespace("qmul") + "searchAction"
+                
+        # initialize URIs of sonic
         self.sonicThingURI = ysap.getNamespace("qmul") + "SonicAnnotatorWT"
         self.sonicActionURI = ysap.getNamespace("qmul") + "execVampPlugin"
         
@@ -158,32 +155,83 @@ class RecHandler:
             # cycle over added bindings
             for a in added:
 
+                ##########################################
+                #
+                # preliminary stuff
+                #
+                ##########################################
+                
                 # save instance uri and in/out fields
                 instanceURI = a["actionInstance"]["value"]
                 inValue = a["inValue"]["value"]
                 outValue = a["outValue"]["value"]
 
-                # before invoking jamendo web thing, we subscribe to its output
-                waitValue = True
-                jamendoInstance = self.ysap.getNamespace("qmul") + str(uuid4())
-                subText = self.ysap.getQuery("ACTION_COMPLETION_TIME", {"instance": " <%s> " % jamendoInstance})
-                s =  SearchHandler(self.kp, self.ysap, waitValue, jamendoInstance)
-                subid = self.kp.subscribe(self.ysap.subscribeURI, subText, "jamendo output", s)
+                # the request contains also the song for which the recommendation is requested
+                # so we need to map this song into SEPA
+                song = json.loads(a["inValue"]["value"])
+                audioFile = song["details"]["previews"]["preview-lq-ogg"]
+                audioClip = song["details"]["url"]
+                name = song["details"]["name"]
                 
-                # invoke the jamendo web thing
-                logging.info("Invoking Jamendo Web Thing")
-                updText = self.ysap.getUpdate("INSERT_SEARCH_REQUEST", {"actionURI": " <%s> " % self.jamendoActionURI,
-	                                                                "dataValue": " '%s' " % inValue,
-	                                                                "instance": " <%s> "  % jamendoInstance,
-                                                                        "graphURI": " <%s> "  % outValue });
-                self.kp.update(self.ysap.updateURI, updText)
+                updText = """PREFIX ac:    <http://audiocommons.org/ns/audiocommons#> 
+                PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+                PREFIX dc:    <http://purl.org/dc/elements/1.1/> 
+                INSERT DATA {{ GRAPH <{graphURI}> 
+                <{audioClip}> dc:title '{name}' .
+                <{audioClip}> rdf:type ac:AudioClip .
+                <{audioClip}> ac:available_as <{audioFile}> .
+                <{audioFile}> rdf:type ac:AudioFile }}
+                }}""".format(audioClip = audioClip, audioFile = audioFile, name = name, graphURI = outValue)
+                self.kp.update(self.ysap.updateURI, updText)                
 
-                # wait for completion of Jamendo's task
-                while s.waitValue:                    
+                ##########################################
+                #
+                # discovery
+                #
+                ##########################################
+
+                search_things = []
+                status, res = self.kp.query(self.ysap.queryURI, self.ysap.getQuery("DISCOVER_SEARCH_ACTION", {}))
+                for r in res["results"]["bindings"]:
+                    search_things.append(r["thing"]["value"])
+                logging.info("Found %s web things with search capabilities" % len(search_things))
+                
+                ###########################################
+                #
+                # invocation of search/freesound/europeana
+                #
+                ###########################################
+
+                waiting = []
+                for thing in search_things:
+                
+                    # before invoking search web thing, we subscribe to its output
+                    waitValue = True
+                    searchInstance = self.ysap.getNamespace("qmul") + str(uuid4())
+                    subText = self.ysap.getQuery("ACTION_COMPLETION_TIME", {"instance": " <%s> " % searchInstance})
+                    s =  SearchHandler(self.kp, self.ysap, waitValue, searchInstance)
+                    subid = self.kp.subscribe(self.ysap.subscribeURI, subText, "search output", s)
+                
+                    # invoke the search web thing
+                    logging.info("Invoking Search Web Thing")
+                    updText = self.ysap.getUpdate("INSERT_SEARCH_REQUEST", {"thingURI": ' <%s> ' % thing,
+                                                                            "actionURI": " <%s> " % self.searchActionURI,
+	                                                                    "dataValue": " '%s' " % inValue,
+	                                                                    "instance": " <%s> "  % searchInstance,
+                                                                            "graphURI": " <%s> "  % outValue });
+                    self.kp.update(self.ysap.updateURI, updText)
+                    waiting.append(s)
+
+                # wait for completion of Search's task
+                while len(waiting) > 0:                    
                     time.sleep(1)
+                    for w in waiting:
+                        if not(w.waitValue):
+                            i = waiting.index(w)
+                            del waiting[i]
+                    logging.debug("waiting...")
                     
                 # before invoking sonic web thing, we subscribe to its output
-                waitValue = True
                 sonicInstance = self.ysap.getNamespace("qmul") + str(uuid4())
                 subText = self.ysap.getQuery("ACTION_COMPLETION_TIME", {"instance": " <%s> " % sonicInstance})
                 s =  SonicHandler(self.kp, self.ysap, waitValue, sonicInstance)

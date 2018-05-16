@@ -160,6 +160,8 @@ updates:
              PREFIX wot: <http://wot.arces.unibo.it/sepa#> 
              PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#> 
              INSERT { 
+               ?thingURI wot:hasTD ?thingDescURI .
+               ?thingDescURI wot:hasInteractionPattern ?actionURI .
                ?actionURI wot:hasInstance ?instance . 
                ?instance wot:hasRequestTimeStamp ?request . 
                ?instance rdf:type wot:ActionInstance .  
@@ -175,6 +177,7 @@ updates:
                BIND(IRI(CONCAT('wot:output_',STR(NOW()))) as ?outputData)               
              }"
     forcedBindings:
+      thingURI: "uri"
       actionURI: "uri"
       instance: "uri"
       dataValue: "literal"
@@ -228,7 +231,7 @@ updates:
                }"
     forcedBindings:
       instance: "uri" 
-
+      
 queries:
 
   ACTION_REQUESTS:
@@ -257,3 +260,14 @@ queries:
              }"
     forcedBindings:
       instance: "uri"
+
+  DISCOVER_SEARCH_ACTION:
+    sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX qmul: <http://eecs.qmul.ac.uk/wot#>
+             SELECT ?thing
+             WHERE {
+               ?thing wot:hasTD ?thingDescURI .
+               ?thingDescURI rdf:type wot:ThingDescription .
+               ?thingDescURI wot:hasInteractionPattern qmul:searchAction
+             }"

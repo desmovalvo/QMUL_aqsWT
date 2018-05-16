@@ -4,6 +4,7 @@
 import json
 import logging
 import requests
+import rdflib
 
 # constants
 NAMESEARCH_URL = "http://api.jamendo.com/v3.0/tracks?client_id=%s&fuzzytags=%s&limit=%s"
@@ -70,7 +71,7 @@ class JamHandler:
 
                 ##############################################################
                 #
-                # search on jamendo
+                # search on jamendo and write to SEPA
                 #
                 ##############################################################    
             
@@ -78,21 +79,54 @@ class JamHandler:
                 r = requests.get(NAMESEARCH_URL % (self.clientID, searchPattern, self.limit))
                 logging.info("Asking Jamendo for songs matching %s" % searchPattern)
                 res = json.loads(r.text)
+                for r in res["results"]:
+                    logging.info(r["name"] + " -- by: " + r["artist_name"])
+
+                # experimental part -- contacting the local sparql generate server
+                searchuri = NAMESEARCH_URL % (self.clientID, searchPattern, self.limit)   
+                query = """PREFIX ac: <http://audiocommons.org/ns/audiocommons#>
+                PREFIX dc: <http://purl.org/dc/elements/1.1/>
+                PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+                PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>                
+                GENERATE { 
+                  ?audioClip rdf:type ac:AudioClip .
+                  ?audioClip ac:available_as ?audioFile .
+                  ?audioClip dc:title ?title .
+                  ?audioFile rdf:type ac:AudioFile
+                }
+                SOURCE <%s> AS ?source
+                ITERATOR iter:JSONPath(?source,"$..results[*]") AS ?res
+                WHERE {
+                BIND(fn:JSONPath(?res, ".id" ) AS ?id)
+                BIND(IRI(fn:JSONPath(?res, "shorturl")) AS ?audioClip)
+                BIND(IRI(fn:JSONPath(?res, "audiodownload")) AS ?audioFile)
+                BIND(fn:JSONPath(?res, "name") AS ?title)
+                }""" % searchuri
+                
+                response = requests.post('http://localhost:5000/sparqlgen', data={"query":query})
+                sg_res = json.loads(response.text)
+                print(sg_res["result"])
+
+                triples = []
+                g = rdflib.Graph()
+                g.parse(data=sg_res["result"], format="n3")
+                for triple in g:
+                    triple_string = " "
+                    for field in triple:
+                        if isinstance(field, rdflib.term.URIRef):
+                            triple_string += " <%s> " % field
+                        elif isinstance(field, rdflib.term.BNode):
+                            triple_string += " _:%s " % field
+                        else:
+                            triple_string += " '%s' " % field
+                    triples.append(triple_string)                
 
                 ##############################################################
                 #
                 # write results to SEPA
                 #
                 ##############################################################    
-
-                # TODO -- use mappings!
-                triples = []
-                for r in res["results"]:                
-                    triples.append(" <%s> rdf:type ac:AudioClip " % r["shorturl"])
-                    triples.append(" <%s> dc:title '%s' " % (r["shorturl"], r["name"].replace("'", "")))
-                    triples.append(" <%s> ac:available_as <%s>  " % (r["shorturl"], r["audiodownload"]))
-                    triples.append(" <%s> rdf:type ac:AudioFile " % r["audiodownload"])
-                    logging.info(r["name"] + " -- by: " + r["artist_name"])
                 tl = ".".join(triples)
 
                 # put results into SEPA
@@ -101,8 +135,11 @@ class JamHandler:
                                                 "instanceURI": " <%s> " % instanceURI,
                                                 "tripleList": tl })
                 self.kp.update(self.ysap.updateURI, updText)                                               
-
+                
             logging.info("Task completed!")
                 
         # increment counter
         self.counter += 1
+
+
+

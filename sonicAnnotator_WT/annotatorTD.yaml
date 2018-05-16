@@ -188,7 +188,7 @@ updates:
 queries:
 
   SONGS:
-    sparql: "PREFIX dc: <http://purl.org/dc/elements/1.1>
+    sparql: "PREFIX dc: <http://purl.org/dc/elements/1.1/>
              PREFIX ac: <http://audiocommons.org/ns/audiocommons#>
              PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
              SELECT ?audioClip ?title ?audioFile
