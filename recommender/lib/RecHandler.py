@@ -176,13 +176,15 @@ class RecHandler:
                 updText = """PREFIX ac:    <http://audiocommons.org/ns/audiocommons#> 
                 PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
                 PREFIX dc:    <http://purl.org/dc/elements/1.1/> 
-                INSERT DATA {{ GRAPH <{graphURI}> 
+                INSERT DATA {{ GRAPH <{graphURI}> {{
                 <{audioClip}> dc:title '{name}' .
                 <{audioClip}> rdf:type ac:AudioClip .
                 <{audioClip}> ac:available_as <{audioFile}> .
                 <{audioFile}> rdf:type ac:AudioFile }}
                 }}""".format(audioClip = audioClip, audioFile = audioFile, name = name, graphURI = outValue)
-                self.kp.update(self.ysap.updateURI, updText)                
+                self.kp.update(self.ysap.updateURI, updText)
+                print(updText)
+                print("==============================")
 
                 ##########################################
                 #
@@ -250,7 +252,88 @@ class RecHandler:
                 
                 # # TODO - perform a SPARQL query to detect similarities
                 # #        based on the output of sonic annotator
+                qText = """prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+                prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX dc: <http://purl.org/dc/elements/1.1/> 
+                PREFIX mo: <http://purl.org/ontology/mo/>	
+                PREFIX af: <http://purl.org/ontology/af/>
+                PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+                PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+                SELECT DISTINCT ?audioFile ?title ?value ?refValue
+                WHERE {{
+                  GRAPH  <{graphURI}> {{                
+                    ?audioClip rdf:type ac:AudioClip .
+                    ?audioClip dc:title ?title .
+                    ?audioClip ac:available_as ?audioFile .
+                    ?audioFile rdf:type ac:AudioFile .
+                    ?audioFile mo:encodes ?signal .
+                    ?signal af:hasEvent ?event .
+                    ?event rdfs:label "(mean value, continuous-time average)" .
+                    ?event af:feature ?value .
+                    ?refAudioClip rdf:type ac:AudioClip .
+                    <{refAudioFile}> rdf:type ac:AudioFile .
+                    ?refAudioClip ac:available_as <{refAudioFile}> .
+                    <{refAudioFile}> mo:encodes ?refSignal .
+                    ?refSignal af:hasEvent ?refEvent .
+                    ?refEvent rdfs:label "(mean value, continuous-time average)" .
+                    ?refEvent af:feature ?refValue .
+                    FILTER (?audioClip != ?refAudioClip) 
+                    FILTER (?value > ?refValue || ?value < ?refValue )
+                    BIND ( ((xsd:float(?refValue)) + (xsd:float(?refValue)) * 25 / 100) AS ?high )
+                    BIND ( ((xsd:float(?refValue)) - (xsd:float(?refValue)) * 25 / 100) AS ?low )
+                    FILTER ( xsd:float(?value) > ?low && xsd:float(?value) < ?high )
+                    }}
+                }}""".format(graphURI = outValue, refAudioFile = audioFile)
+                print(qText)
+                status, res = self.kp.query(self.ysap.queryURI, qText)
+                print(res)
 
+                # # TODO - perform a SPARQL query to detect similarities
+                # #        based on the output of sonic annotator
+                uText = """prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+                prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX dc: <http://purl.org/dc/elements/1.1/> 
+                PREFIX mo: <http://purl.org/ontology/mo/>	
+                PREFIX af: <http://purl.org/ontology/af/>
+                PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+                PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+                PREFIX rec:<http://purl.org/ontology/rec/core#>
+                INSERT {{
+                  GRAPH <{graphURI}> {{
+                    ?recURI rdf:type rec:Recommendation .
+                    ?audioClip rec:recommended_in ?recURI
+                  }}
+                }}
+                WHERE {{
+                  GRAPH  <{graphURI}> {{                
+                    ?audioClip rdf:type ac:AudioClip .
+                    ?audioClip dc:title ?title .
+                    ?audioClip ac:available_as ?audioFile .
+                    ?audioFile rdf:type ac:AudioFile .
+                    ?audioFile mo:encodes ?signal .
+                    ?signal af:hasEvent ?event .
+                    ?event rdfs:label "(mean value, continuous-time average)" .
+                    ?event af:feature ?value .
+                    ?refAudioClip rdf:type ac:AudioClip .
+                    <{refAudioFile}> rdf:type ac:AudioFile .
+                    ?refAudioClip ac:available_as <{refAudioFile}> .
+                    <{refAudioFile}> mo:encodes ?refSignal .
+                    ?refSignal af:hasEvent ?refEvent .
+                    ?refEvent rdfs:label "(mean value, continuous-time average)" .
+                    ?refEvent af:feature ?refValue .
+                    FILTER (?audioClip != ?refAudioClip) 
+                    FILTER (?value > ?refValue || ?value < ?refValue )
+                    BIND ( ((xsd:float(?refValue)) + (xsd:float(?refValue)) * 25 / 100) AS ?high )
+                    BIND ( ((xsd:float(?refValue)) - (xsd:float(?refValue)) * 25 / 100) AS ?low )
+                    FILTER ( xsd:float(?value) > ?low && xsd:float(?value) < ?high )
+                    BIND(IRI(CONCAT('rec:rec_',STR(NOW()))) as ?recURI)               
+                  }}
+                }}""".format(graphURI = outValue, refAudioFile = audioFile)
+                print(uText)
+                self.kp.update(self.ysap.updateURI, uText)
+                print(res)
+
+                
                 # # TODO - delete from the graph non-similar files
 
                 # perform a SPARQL update with the timestamp

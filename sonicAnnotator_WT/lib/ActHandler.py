@@ -25,6 +25,7 @@ class ActHandler:
         logging.debug("Logging subsystem initialized for ActHandler")
 
         # attributes
+        self.maxThreads = 5
         self.clientID = clientID
         self.counter = 0
         self.ysap = ysap
@@ -59,52 +60,56 @@ class ActHandler:
                 qtext = self.ysap.getQuery("SONGS", {"graphURI": " <%s> " % outputGraph})
                 print(qtext)
                 status, res = self.kp.query(self.ysap.queryURI, qtext)
+
+                # list of threads
+                threads = []
                 
                 for r in res["results"]["bindings"]:
+
+                    def worker(r):
                     
-                    # NOTE:
-                    # this is the *old* way to use a vamp plugin, i.e. invoking sonic annotator as a subprocess
-                    #
-                    # invoke sonic
-                    # 0. read notification data
-                    songName = r["title"]["value"]
-                    songFileUri = r["audioFile"]["value"]
-                    songClipUri = r["audioClip"]["value"]
+                        # 0. read notification data
+                        songName = r["title"]["value"]
+                        songFileUri = r["audioFile"]["value"]
+                        songClipUri = r["audioClip"]["value"]
 
-                    # now we should download the file and provide it to sonic annotator
-                    # we could provide the file directly, but unfortunately freesound requires auth
-                    print("Analysing song " + songFileUri)
-                    subprocess.run(["sonic-annotator", "-t", "linearcentroid.n3", songFileUri, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q"])        
-                    logging.debug("ActionHandker::handle() -- writing results")
-                    
-                    # read the file ".n3" and put everything into the named graph
-                    g = Graph()
-                    print(os.getcwd())
-                    with open(os.path.basename(songFileUri).split(".")[0] + ".n3", "r") as f:
-                        result = g.parse(f, format="n3")
+                        # 1. invoke sonic
+                        print("Analysing song " + songFileUri)
+                        subprocess.run(["sonic-annotator", "-t", "linearcentroid.n3", songFileUri, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q"])        
+                        logging.debug("ActionHandker::handle() -- writing results")
+                        
+                        # 2. read the file ".n3" and put everything into the named graph
+                        g = Graph()
+                        with open(os.path.basename(songFileUri).split(".")[0] + ".n3", "r") as f:
+                            result = g.parse(f, format="n3")
 
-                        # perform a SPARQL update on the graph g to add the link between:
-                        # the audioFile (the one passed by Jamendo, not the one downloaded by Sonic) and
-                        # the mean value
+                            # perform a SPARQL update on the graph g to add the link between:
+                            # the audioFile (the one passed by Jamendo, not the one downloaded by Sonic) and
+                            # the mean value
 
-                        g.update("""prefix dc: <http://purl.org/dc/elements/1.1/>
-                        PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
-                        PREFIX mo: <http://purl.org/ontology/mo/>
-                        PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                        PREFIX afo: <http://purl.org/ontology/af/> 
-                        prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>                       
-                        INSERT { ?signal afo:hasEvent ?event }
-                        WHERE { 
-                        ?audioFile mo:encodes ?signal . 
-                        ?event rdfs:label "(mean value, continuous-time average)" . 
-                        ?event afo:feature ?p 
-                        }""")
-                        upd = getUpdateFromGraph(result, outputGraph)
-                        self.kp.update(self.ysap.updateURI, upd)                                               
+                            g.update("""prefix dc: <http://purl.org/dc/elements/1.1/>
+                            PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+                            PREFIX mo: <http://purl.org/ontology/mo/>
+                            PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                            PREFIX afo: <http://purl.org/ontology/af/> 
+                            prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>                       
+                            INSERT { ?signal afo:hasEvent ?event }
+                            WHERE { 
+                            ?audioFile mo:encodes ?signal . 
+                            ?event rdfs:label "(mean value, continuous-time average)" . 
+                            ?event afo:feature ?p 
+                            }""")
+                            upd = getUpdateFromGraph(result, outputGraph)
+                            self.kp.update(self.ysap.updateURI, upd)                                               
 
+                    # start threads                    
+                    t = threading.Thread(target=worker, args=(r,))
+                    threads.append(t)
+                    t.setDaemon(True)
+                    t.start()
 
-                # TODO -- check the results!
-                # now we should check the mean value and see the most similar.. 
+                for t in threads:
+                    t.join()
                         
                 # write completion time
                 updText = self.ysap.getUpdate("INSERT_SONIC_RESPONSE",
