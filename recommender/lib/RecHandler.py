@@ -35,7 +35,7 @@ class SearchHandler:
         if (self.counter == 0):
 
             # debug message
-            logging.info("Subscription to completion of search action output correctly initialized")
+            logging.debug("Subscription to completion of search action output correctly initialized")
 
         ##############################################################
         #
@@ -46,7 +46,7 @@ class SearchHandler:
         else:
 
             # debug message
-            logging.info("Search action completed!")
+            logging.debug("Search action completed!")
 
             # delete action request
             # self.kp.update(self.ysap.updateURI, self.ysap.getUpdate("DELETE_REQUEST", {"instance": " <%s> " % self.instance}))
@@ -55,6 +55,7 @@ class SearchHandler:
             self.waitValue = False
 
         self.counter += 1
+        return
 
 
 class SonicHandler:
@@ -84,7 +85,7 @@ class SonicHandler:
         if (self.counter == 0):
 
             # debug message
-            logging.info("Subscription to sonic output correctly initialized")
+            logging.debug("Subscription to sonic output correctly initialized")
 
         ##############################################################
         #
@@ -95,7 +96,7 @@ class SonicHandler:
         else:
 
             # debug message
-            logging.info("SonicWT completed its task!")
+            logging.debug("SonicWT completed its task!")
 
             # delete action request
             # self.kp.update(self.ysap.updateURI, self.ysap.getUpdate("DELETE_REQUEST", {"instance": " <%s> " % self.instance}))
@@ -104,6 +105,7 @@ class SonicHandler:
             self.waitValue = False
 
         self.counter += 1
+        return
         
 
 class RecHandler:
@@ -139,7 +141,7 @@ class RecHandler:
         if (self.counter == 0):
 
             # debug message
-            logging.info("Subscription to actions correctly initialized")
+            logging.debug("Subscription to actions correctly initialized")
 
         ##############################################################
         #
@@ -151,7 +153,7 @@ class RecHandler:
             
             # debug message
             if len(added) > 0:
-                logging.info("Recommendation request #%s" % self.counter)
+                logging.debug("Recommendation request #%s" % self.counter)
             
             # cycle over added bindings
             for a in added:
@@ -169,7 +171,6 @@ class RecHandler:
 
                 # the request contains also the song for which the recommendation is requested
                 # so we need to map this song into SEPA
-                print(colored(a["inValue"]["value"], "red", attrs=["bold"]))
                 song = json.loads(a["inValue"]["value"])
                 audioFile = song["details"]["previews"]["preview-lq-ogg"]
                 audioClip = song["details"]["url"]
@@ -185,8 +186,6 @@ class RecHandler:
                 <{audioFile}> rdf:type ac:AudioFile }}
                 }}""".format(audioClip = audioClip, audioFile = audioFile, name = name, graphURI = outValue)
                 self.kp.update(self.ysap.updateURI, updText)
-                print(updText)
-                print("==============================")
 
                 ##########################################
                 #
@@ -198,7 +197,7 @@ class RecHandler:
                 status, res = self.kp.query(self.ysap.queryURI, self.ysap.getQuery("DISCOVER_SEARCH_ACTION", {}))
                 for r in res["results"]["bindings"]:
                     search_things.append(r["thing"]["value"])
-                logging.info("Found %s web things with search capabilities" % len(search_things))
+                logging.debug("Found %s web things with search capabilities" % len(search_things))
                 
                 ###########################################
                 #
@@ -217,7 +216,7 @@ class RecHandler:
                     subid = self.kp.subscribe(self.ysap.subscribeURI, subText, "search output", s)
                 
                     # invoke the search web thing
-                    logging.info("Invoking Search Web Thing")
+                    logging.debug("Invoking Search Web Thing")
                     updText = self.ysap.getUpdate("INSERT_SEARCH_REQUEST", {"thingURI": ' <%s> ' % thing,
                                                                             "actionURI": " <%s> " % self.searchActionURI,
 	                                                                    "dataValue": " '%s' " % inValue,
@@ -241,9 +240,14 @@ class RecHandler:
                 s =  SonicHandler(self.kp, self.ysap, waitValue, sonicInstance)
                 subid = self.kp.subscribe(self.ysap.subscribeURI, subText, "sonic output", s)
                     
+                # discover the best sonic instance
+                qText = self.ysap.getQuery("BEST_SONIC_INSTANCE", {})
+                status, res = self.kp.query(self.ysap.queryURI, qText)
+                action = res["results"]["bindings"][0]["action"]["value"]
+                
                 # invoke sonic annotator web thing
-                logging.info("Invoking Sonic Annotator Web Thing")                
-                updText = self.ysap.getUpdate("INSERT_SONIC_REQUEST", {"actionURI": " <%s> " % self.sonicActionURI,
+                logging.debug("Invoking Sonic Annotator Web Thing")                
+                updText = self.ysap.getUpdate("INSERT_SONIC_REQUEST", {"actionURI": " <%s> " % action,
 	                                                    	       "instance": " <%s> "  % sonicInstance,
                                                                        "graphURI": " <%s> "  % outValue });
                 self.kp.update(self.ysap.updateURI, updText)
@@ -251,98 +255,16 @@ class RecHandler:
                 # wait for completion of Sonic's task
                 while s.waitValue:
                     time.sleep(1)
-                
-                # # TODO - perform a SPARQL query to detect similarities
-                # #        based on the output of sonic annotator
-                qText = """prefix xsd: <http://www.w3.org/2001/XMLSchema#>
-                prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                PREFIX dc: <http://purl.org/dc/elements/1.1/> 
-                PREFIX mo: <http://purl.org/ontology/mo/>	
-                PREFIX af: <http://purl.org/ontology/af/>
-                PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
-                PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
-                SELECT DISTINCT ?audioFile ?title ?value ?refValue
-                WHERE {{
-                  GRAPH  <{graphURI}> {{                
-                    ?audioClip rdf:type ac:AudioClip .
-                    ?audioClip dc:title ?title .
-                    ?audioClip ac:available_as ?audioFile .
-                    ?audioFile rdf:type ac:AudioFile .
-                    ?audioFile mo:encodes ?signal .
-                    ?signal af:hasEvent ?event .
-                    ?event rdfs:label "(mean value, continuous-time average)" .
-                    ?event af:feature ?value .
-                    ?refAudioClip rdf:type ac:AudioClip .
-                    <{refAudioFile}> rdf:type ac:AudioFile .
-                    ?refAudioClip ac:available_as <{refAudioFile}> .
-                    <{refAudioFile}> mo:encodes ?refSignal .
-                    ?refSignal af:hasEvent ?refEvent .
-                    ?refEvent rdfs:label "(mean value, continuous-time average)" .
-                    ?refEvent af:feature ?refValue .
-                    FILTER (?audioClip != ?refAudioClip) 
-                    FILTER (?value > ?refValue || ?value < ?refValue )
-                    BIND ( ((xsd:float(?refValue)) + (xsd:float(?refValue)) * 25 / 100) AS ?high )
-                    BIND ( ((xsd:float(?refValue)) - (xsd:float(?refValue)) * 25 / 100) AS ?low )
-                    FILTER ( xsd:float(?value) > ?low && xsd:float(?value) < ?high )
-                    }}
-                }}""".format(graphURI = outValue, refAudioFile = audioFile)
-                print(qText)
-                status, res = self.kp.query(self.ysap.queryURI, qText)
-                print(res)
 
-                # # TODO - perform a SPARQL query to detect similarities
-                # #        based on the output of sonic annotator
-                uText = """prefix xsd: <http://www.w3.org/2001/XMLSchema#>
-                prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                PREFIX dc: <http://purl.org/dc/elements/1.1/> 
-                PREFIX mo: <http://purl.org/ontology/mo/>	
-                PREFIX af: <http://purl.org/ontology/af/>
-                PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
-                PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
-                PREFIX rec:<http://purl.org/ontology/rec/core#>
-                INSERT {{
-                  GRAPH <{graphURI}> {{
-                    ?recURI rdf:type rec:Recommendation .
-                    ?audioClip rec:recommended_in ?recURI
-                  }}
-                }}
-                WHERE {{
-                  GRAPH  <{graphURI}> {{                
-                    ?audioClip rdf:type ac:AudioClip .
-                    ?audioClip dc:title ?title .
-                    ?audioClip ac:available_as ?audioFile .
-                    ?audioFile rdf:type ac:AudioFile .
-                    ?audioFile mo:encodes ?signal .
-                    ?signal af:hasEvent ?event .
-                    ?event rdfs:label "(mean value, continuous-time average)" .
-                    ?event af:feature ?value .
-                    ?refAudioClip rdf:type ac:AudioClip .
-                    <{refAudioFile}> rdf:type ac:AudioFile .
-                    ?refAudioClip ac:available_as <{refAudioFile}> .
-                    <{refAudioFile}> mo:encodes ?refSignal .
-                    ?refSignal af:hasEvent ?refEvent .
-                    ?refEvent rdfs:label "(mean value, continuous-time average)" .
-                    ?refEvent af:feature ?refValue .
-                    FILTER (?audioClip != ?refAudioClip) 
-                    FILTER (?value > ?refValue || ?value < ?refValue )
-                    BIND ( ((xsd:float(?refValue)) + (xsd:float(?refValue)) * 25 / 100) AS ?high )
-                    BIND ( ((xsd:float(?refValue)) - (xsd:float(?refValue)) * 25 / 100) AS ?low )
-                    FILTER ( xsd:float(?value) > ?low && xsd:float(?value) < ?high )
-                    BIND(IRI(CONCAT('rec:rec_',STR(NOW()))) as ?recURI)               
-                  }}
-                }}""".format(graphURI = outValue, refAudioFile = audioFile)
-                print(uText)
+                # perform a SPARQL update to detect similarities
+                uText = self.ysap.getUpdate("TD_DETECT_SIMILARITIES", {"graphURI": " <%s> " % outValue,
+                                                                       "refAudioFile": " <%s> " % audioFile})
                 self.kp.update(self.ysap.updateURI, uText)
-                print(res)
-
-                
-                # # TODO - delete from the graph non-similar files
 
                 # perform a SPARQL update with the timestamp
-                logging.info("Request recommendation completed!")
                 updText = self.ysap.getUpdate("INSERT_REC_RESPONSE", { "instanceURI": " <%s> " % instanceURI })
-                self.kp.update(self.ysap.updateURI, updText)                                               
-                
-                
+                self.kp.update(self.ysap.updateURI, updText)
+                logging.debug("Request recommendation completed!")
+                                
         # increment counter
         self.counter += 1

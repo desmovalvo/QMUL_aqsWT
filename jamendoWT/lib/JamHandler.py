@@ -37,7 +37,7 @@ class JamHandler:
         if (self.counter == 0):
 
             # debug message
-            logging.info("Subscription to actions correctly initialized")
+            logging.debug("Subscription to actions correctly initialized")
 
         ##############################################################
         #
@@ -48,7 +48,8 @@ class JamHandler:
         else:
             
             # debug message
-            logging.info("Search request #%s" % self.counter)
+            if added > 0:
+                logging.debug("Search request #%s" % self.counter)
             
             # cycle over added bindings
             for a in added:
@@ -67,7 +68,7 @@ class JamHandler:
                 instanceURI = a["actionInstance"]["value"]
                 inputData = json.loads(a["inValue"]["value"])
                 outputGraph = a["outValue"]["value"]
-                logging.info("Action output will be in %s" % outputGraph)
+                logging.debug("Action output will be in %s" % outputGraph)
 
                 ##############################################################
                 #
@@ -77,10 +78,10 @@ class JamHandler:
             
                 searchPattern = "+".join(inputData["tags"])
                 r = requests.get(NAMESEARCH_URL % (self.clientID, searchPattern, self.limit))
-                logging.info("Asking Jamendo for songs matching %s" % searchPattern)
+                logging.debug("Asking Jamendo for songs matching %s" % searchPattern)
                 res = json.loads(r.text)
                 for r in res["results"]:
-                    logging.info(r["name"] + " -- by: " + r["artist_name"])
+                    logging.debug(r["name"] + " -- by: " + r["artist_name"])
 
                 # experimental part -- contacting the local sparql generate server
                 searchuri = NAMESEARCH_URL % (self.clientID, searchPattern, self.limit)   
@@ -136,7 +137,7 @@ class JamHandler:
                                                 "tripleList": tl })
                 self.kp.update(self.ysap.updateURI, updText)                                               
                 
-            logging.info("Task completed!")
+            logging.debug("Task completed!")
                 
         # increment counter
         self.counter += 1

@@ -231,9 +231,74 @@ updates:
                }"
     forcedBindings:
       instance: "uri" 
+
+  TD_DETECT_SIMILARITIES:
+    sparql: "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+             prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+             PREFIX dc: <http://purl.org/dc/elements/1.1/> 
+             PREFIX mo: <http://purl.org/ontology/mo/>	
+             PREFIX af: <http://purl.org/ontology/af/>
+             PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+             PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+             PREFIX rec:<http://purl.org/ontology/rec/core#>
+             INSERT {
+               GRAPH ?graphURI {
+                 ?recURI rdf:type rec:Recommendation .
+                 ?audioClip rec:recommended_in ?recURI
+               }
+             }
+             WHERE {
+               GRAPH  ?graphURI {               
+                 ?audioClip rdf:type ac:AudioClip .
+                 ?audioClip dc:title ?title .
+                 ?audioClip ac:available_as ?audioFile .
+                 ?audioFile rdf:type ac:AudioFile .
+                 ?audioFile mo:encodes ?signal .
+                 ?signal af:hasEvent ?event .
+                 ?event rdfs:label '(mean value, continuous-time average)' .
+                 ?event af:feature ?value .
+                 ?refAudioClip rdf:type ac:AudioClip .
+                 ?refAudioFile rdf:type ac:AudioFile .
+                 ?refAudioClip ac:available_as ?refAudioFile .
+                 ?refAudioFile mo:encodes ?refSignal .
+                 ?refSignal af:hasEvent ?refEvent .
+                 ?refEvent rdfs:label '(mean value, continuous-time average)' .
+                 ?refEvent af:feature ?refValue .
+                 FILTER (?audioClip != ?refAudioClip) 
+                 FILTER (?value > ?refValue || ?value < ?refValue )
+                 BIND ( ((xsd:float(?refValue)) + (xsd:float(?refValue)) * 25 / 100) AS ?high )
+                 BIND ( ((xsd:float(?refValue)) - (xsd:float(?refValue)) * 25 / 100) AS ?low )
+                 FILTER ( xsd:float(?value) > ?low && xsd:float(?value) < ?high )
+                 BIND(IRI(CONCAT('rec:rec_',STR(NOW()))) as ?recURI)               
+               }
+             }"
+    forcedBindings:
+      graphUri: "uri"
+      refAudioFile: "uri"
       
 queries:
 
+  BEST_SONIC_INSTANCE:
+    sparql: "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+             PREFIX dc: <http://purl.org/dc/elements/1.1/> 
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX mo: <http://purl.org/ontology/mo/>	
+             PREFIX af: <http://purl.org/ontology/af/>
+             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>     
+             PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rec: <http://purl.org/ontology/rec/core#>
+             SELECT ?action WHERE { 
+               ?thing rdf:type wot:Thing .
+               ?thing wot:hasTD ?td .
+               ?td wot:hasInteractionPattern ?property .
+               ?property rdf:type wot:Property .
+               ?property wot:hasName 'Workload' .
+               ?property wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?value .
+               ?td wot:hasInteractionPattern ?action .
+               ?action wot:hasName 'Exec Vamp Plugin' .
+             } ORDER BY DESC(?value) LIMIT 1"
+  
   ACTION_REQUESTS:
     sparql: "PREFIX wot: <http://wot.arces.unibo.it/sepa#>
              PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>

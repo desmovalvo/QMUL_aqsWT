@@ -85,7 +85,7 @@ if __name__ == "__main__":
     #
     ##############################################################    
 
-    logging.info("WebThing ready! Waiting for actions!")
+    logging.debug("WebThing ready! Waiting for actions!")
     try:
        input("Press <ENTER> to close the WebThing")
        logging.debug("Closing WebThing")
