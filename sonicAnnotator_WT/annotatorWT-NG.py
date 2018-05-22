@@ -5,7 +5,6 @@ CONFIG_FILE = "annotatorTD.yaml"
 SONIC_ANN = ["sonic-annotator", "-l"]
 
 # global reqs
-import time
 import vamp
 import logging
 import subprocess
@@ -46,7 +45,8 @@ if __name__ == "__main__":
     ##############################################################
     
     # 2 - generate URIs
-
+    logging.debug("Pushing Thing Description to SEPA")
+    
     thingName = "Sonic Annotator WT"
     thingURI = ysap.namespaces["qmul"] + "SonicAnnotatorWT"
     thingDescURI = ysap.namespaces["qmul"] + "SonicAnnotatorWT_TD"
@@ -116,16 +116,14 @@ if __name__ == "__main__":
     #
     ##############################################################
 
-    # subscribe
+    # 7 . subscribe
+    logging.debug("Subscribing to action requests")
     subText = ysap.getQuery("ACTION_REQUESTS",
                             {"thingURI": " <%s> " % thingURI,
                              "thingDescURI": " <%s> " % thingDescURI,
                              "actionURI": " <%s> " % actionURI })
     kp.subscribe(ysap.subscribeURI, subText, "actions", ActHandler(kp, ysap, clientID))
 
-    # # 7 - subscribe to action requests
-    # wt.waitForActions(ActionHandler)
-    
     # 8 - wait, then destroy data
     logging.info("WebThing ready! Waiting for actions!")
     try:

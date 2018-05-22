@@ -178,6 +178,23 @@ updates:
       thingDescURI: "uri"
       actionURI: "uri"
 
+  LOCAL_FIX:
+    sparql: "PREFIX dc: <http://purl.org/dc/elements/1.1/>    
+            PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+            PREFIX mo: <http://purl.org/ontology/mo/>
+            PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX afo: <http://purl.org/ontology/af/> 
+            prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>    
+            DELETE { ?audioFile mo:encodes ?signal }
+            INSERT { ?newAudioFile mo:encodes ?signal . ?signal afo:hasEvent ?event }
+            WHERE { 
+              ?audioFile mo:encodes ?signal . 
+              ?event rdfs:label '(mean value, continuous-time average)' . 
+              ?event afo:feature ?p 
+            }"
+    forcedBindings:
+      newAudioFile: "uri"
+      
   TD_DELETE:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
              PREFIX wot: <http://wot.arces.unibo.it/sepa#>
