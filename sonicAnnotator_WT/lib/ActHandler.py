@@ -13,6 +13,7 @@ import subprocess
 from uuid import uuid4
 from rdflib import Graph
 from lib.utils import *
+from termcolor import colored
 
 
 class ActHandler:
@@ -49,10 +50,18 @@ class ActHandler:
             # cycle over added bindings
             for a in added:
 
+                # update the load
+                utext = self.ysap.getUpdate("INCREMENT_LOAD", {})
+                print(utext)
+                self.kp.update(self.ysap.updateURI, utext)                
+                
                 # read the action input                
                 instanceURI = a["actionInstance"]["value"]
                 inputData = a["inValue"]["value"]
                 outputGraph = a["outValue"]["value"]
+
+                # create a lock
+                lock = threading.Lock()
                 
                 # with a query get the transform
             
@@ -66,44 +75,104 @@ class ActHandler:
                 
                 for r in res["results"]["bindings"]:
 
-                    def worker(r):
-                    
+                    def worker(r, lock):
+
+                        # acquire the lock
+                        lock.acquire()
+                        
                         # 0. read notification data
                         songName = r["title"]["value"]
                         songFileUri = r["audioFile"]["value"]
                         songClipUri = r["audioClip"]["value"]
 
                         # 1. invoke sonic
-                        print("Analysing song " + songFileUri)
-                        subprocess.run(["sonic-annotator", "-t", "linearcentroid.n3", songFileUri, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q"])        
-                        logging.debug("ActionHandker::handle() -- writing results")
                         
-                        # 2. read the file ".n3" and put everything into the named graph
-                        g = Graph()
-                        with open(os.path.basename(songFileUri).split(".")[0] + ".n3", "r") as f:
-                            result = g.parse(f, format="n3")
+                        # 1.1. -- for jamendo songs                        
+                        # -> this step is needed because otherwise, sonic with jamendo songs would produce an .n3 file
+                        # note: this is an hack! fix it!
+                        if os.path.basename(songFileUri) == "":
 
-                            # perform a SPARQL update on the graph g to add the link between:
-                            # the audioFile (the one passed by Jamendo, not the one downloaded by Sonic) and
-                            # the mean value
+                            # download file
+                            response = requests.get(songFileUri, stream=True)
+                            localFile = songFileUri.split("/")[-3] + ".mp3"                            
+                            open(localFile, "wb").write(response.content)
 
-                            g.update("""prefix dc: <http://purl.org/dc/elements/1.1/>
-                            PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
-                            PREFIX mo: <http://purl.org/ontology/mo/>
-                            PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                            PREFIX afo: <http://purl.org/ontology/af/> 
-                            prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>                       
-                            INSERT { ?signal afo:hasEvent ?event }
-                            WHERE { 
-                            ?audioFile mo:encodes ?signal . 
-                            ?event rdfs:label "(mean value, continuous-time average)" . 
-                            ?event afo:feature ?p 
-                            }""")
-                            upd = getUpdateFromGraph(result, outputGraph)
-                            self.kp.update(self.ysap.updateURI, upd)                                               
+                            # invoke sonic
+                            print("Analysing song " + songFileUri)
+                            subprocess.run(["sonic-annotator", "-t", "linearcentroid.n3", localFile, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q", "--rdf-track-uri", songFileUri])        
+                            logging.debug("ActionHandker::handle() -- writing results")
+
+                            # 2. read the file .n3 and put everything into the named graph
+                            g = Graph()
+                            print(colored("pre-with", "red", attrs=["bold"]))
+                            inputFilename = localFile.split(".")[0] + ".n3"                        
+                            with open(inputFilename, "r") as f:
+                            
+                                result = g.parse(f, format="n3")
+
+                                # perform a SPARQL update on the graph g to add the link between:
+                                # the audioFile (the one passed by Jamendo, not the one downloaded by Sonic) and
+                                # the mean value
+
+                                g.update(("""prefix dc: <http://purl.org/dc/elements/1.1/>
+                                PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+                                PREFIX mo: <http://purl.org/ontology/mo/>
+                                PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                                PREFIX afo: <http://purl.org/ontology/af/> 
+                                prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>    
+                                DELETE {{ ?audioFile mo:encodes ?signal }}
+                                INSERT {{ <{newAudioFile}> mo:encodes ?signal . ?signal afo:hasEvent ?event }}
+                                WHERE {{ 
+                                ?audioFile mo:encodes ?signal . 
+                                ?event rdfs:label "(mean value, continuous-time average)" . 
+                                ?event afo:feature ?p 
+                                }}""").format(newAudioFile = songFileUri))
+                                upd = getUpdateFromGraph(result, outputGraph)
+                                self.kp.update(self.ysap.updateURI, upd)
+                            
+                        # 1.2 -- for other audio files
+                        else:
+
+                            # invoke sonic
+                            print("Analysing song " + songFileUri)
+                            subprocess.run(["sonic-annotator", "-t", "linearcentroid.n3", songFileUri, "--summary", "mean", "-w", "rdf", "--rdf-force", "-q"])        
+                            logging.debug("ActionHandker::handle() -- writing results")
+                        
+                            # 2. read the file .n3 and put everything into the named graph
+                            try:
+                                g = Graph()
+                                print(colored("pre-with", "red", attrs=["bold"]))
+                                inputFilename = os.path.basename(songFileUri).split(".")[0] + ".n3"                        
+                                with open(inputFilename, "r") as f:
+                            
+                                    result = g.parse(f, format="n3")
+                                      
+                                    # perform a SPARQL update on the graph g to add the link between:
+                                    # the audioFile (the one passed by Jamendo, not the one downloaded by Sonic) and
+                                    # the mean value
+                            
+                                    g.update("""prefix dc: <http://purl.org/dc/elements/1.1/>
+                                    PREFIX ac: <http://audiocommons.org/ns/audiocommons#> 
+                                    PREFIX mo: <http://purl.org/ontology/mo/>
+                                    PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                                    PREFIX afo: <http://purl.org/ontology/af/> 
+                                    prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>                       
+                                    INSERT { ?signal afo:hasEvent ?event }
+                                    WHERE { 
+                                    ?audioFile mo:encodes ?signal . 
+                                    ?event rdfs:label "(mean value, continuous-time average)" . 
+                                    ?event afo:feature ?p 
+                                    }""")
+                                    upd = getUpdateFromGraph(result, outputGraph)
+                                    self.kp.update(self.ysap.updateURI, upd)
+                            except:
+                                print("Error with n3 file...")
+
+                        # release the lock
+                        lock.release()
 
                     # start threads                    
-                    t = threading.Thread(target=worker, args=(r,))
+                    t = threading.Thread(target=worker, args=(r, lock))
                     threads.append(t)
                     t.setDaemon(True)
                     t.start()

@@ -6,6 +6,7 @@ import time
 import logging
 import requests
 from uuid import uuid4
+from termcolor import colored
 
 class SearchHandler:
 
@@ -168,6 +169,7 @@ class RecHandler:
 
                 # the request contains also the song for which the recommendation is requested
                 # so we need to map this song into SEPA
+                print(colored(a["inValue"]["value"], "red", attrs=["bold"]))
                 song = json.loads(a["inValue"]["value"])
                 audioFile = song["details"]["previews"]["preview-lq-ogg"]
                 audioClip = song["details"]["url"]

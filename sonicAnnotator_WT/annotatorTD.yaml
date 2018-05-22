@@ -37,6 +37,70 @@ updates:
       thingName:
         type: "literal"
         value: ""
+
+  TD_ADD_PROPERTY:
+    sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             DELETE {
+               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+               ?propertyURI rdf:type wot:Property .
+               ?propertyURI wot:hasName ?propertyName .
+               ?propertyURI wot:hasDataSchema ?dataSchema .
+               ?dataSchema rdf:type wot:FieldSchema .
+               ?dataSchema rdf:type xsd:string .               
+               ?propertyURI wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?oldValue .
+             }
+             INSERT {
+               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+               ?propertyURI rdf:type wot:Property .
+               ?propertyURI wot:hasName ?propertyName .
+               ?propertyURI wot:hasDataSchema ?dataSchema .
+               ?dataSchema rdf:type wot:FieldSchema .
+               ?dataSchema rdf:type xsd:string .               
+               ?propertyURI wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?propertyValue .
+            } WHERE {
+               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+               ?propertyURI rdf:type wot:Property .
+               ?propertyURI wot:hasName ?propertyName .
+               ?propertyURI wot:hasDataSchema ?dataSchema .
+               ?dataSchema rdf:type wot:FieldSchema .
+               ?dataSchema rdf:type xsd:string .               
+               ?propertyURI wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?oldValue .
+            }"
+    forcedBindings:
+      thingDescURI: "uri"
+      propertyURI: "uri"
+      propertyName: "literal"
+      propertyData: "uri"
+      propertyValue: "literal"
+      dataSchema: "uri"
+
+  INCREMENT_LOAD:
+    sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             DELETE {
+               ?propertyData dul:hasDataValue ?propertyValue .
+             }
+             INSERT {
+               ?propertyData dul:hasDataValue ?newValue .
+             }
+             WHERE{
+               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+               ?propertyURI rdf:type wot:Property .
+               ?propertyURI wot:hasName 'Workload' .
+               ?propertyURI wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?propertyValue .
+               BIND(xsd:integer(?propertyValue)+1 AS ?newValue)
+             }"
       
   TD_ADD_ACTION_GRAPH_INPUT_GRAPH_OUTPUT:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -146,11 +210,21 @@ updates:
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             PREFIX dc: <http://purl.org/dc/elements/1.1>
             PREFIX ac: <http://audiocommons.org/ns/audiocommons#>
+            DELETE {
+              ?propertyData dul:hasDataValue ?propertyValue .
+            }
             INSERT { 
               ?instanceURI wot:hasCompletionTimestamp ?time .
+              ?propertyData dul:hasDataValue ?newValue .
             } 
             WHERE {
               ?actionURI wot:hasInstance ?instanceURI .
+              ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+              ?propertyURI rdf:type wot:Property .
+              ?propertyURI wot:hasName 'Workload' .
+              ?propertyURI wot:hasData ?propertyData .
+              ?propertyData dul:hasDataValue ?propertyValue .
+              BIND(xsd:integer(?propertyValue)-1 AS ?newValue)
               BIND(now() AS ?time)
             }"
     forcedBindings:

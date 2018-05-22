@@ -46,14 +46,27 @@ if __name__ == "__main__":
     ##############################################################
     
     # 2 - generate URIs
+
     thingName = "Sonic Annotator WT"
     thingURI = ysap.namespaces["qmul"] + "SonicAnnotatorWT"
     thingDescURI = ysap.namespaces["qmul"] + "SonicAnnotatorWT_TD"
+
     actionURI = ysap.namespaces["qmul"] + "execVampPlugin"
     actionName = "Exec Vamp Plugin"
     actionComment = "Exploit Sonic Annotator to run VAMP plugin"
     inDataSchema = ysap.namespaces["qmul"] + "inDS"
     outDataSchema = ysap.namespaces["qmul"] + "outDS"
+
+    propertyURI = ysap.namespaces["qmul"] + "hasVampPlugin"
+    propertyName = "Vamp Plugin"
+    propertyData = ysap.namespaces["qmul"] + "propData"
+    propDataSchema = ysap.namespaces["qmul"] + "propDS"
+
+    wlPropertyURI = ysap.namespaces["qmul"] + "hasWorkload"
+    wlPropertyName = "Workload"
+    wlPropertyData = ysap.namespaces["qmul"] + "propDataWL"
+    wlPropDataSchema = ysap.namespaces["qmul"] + "propDSWL"
+
     
     # 3 - init the web thing
     u = ysap.getUpdate("TD_INIT", {
@@ -74,6 +87,29 @@ if __name__ == "__main__":
     })
     kp.update(ysap.updateURI, u)
 
+    # 5 - add a property for the vamp plugins
+    for plugin in vamp.list_plugins():
+        u = ysap.getUpdate("TD_ADD_PROPERTY", {
+            "thingDescURI": " <%s> " % thingDescURI,
+            "propertyURI": " <%s> " % propertyURI,
+            "propertyName": " '%s' " % propertyName,
+            "propertyData": " <%s> " % propertyData,
+            "dataSchema": " <%s> " % propDataSchema,
+            "propertyValue": " '%s' " % plugin
+        })
+        kp.update(ysap.updateURI, u)
+        
+    # 6 - add a property for the workload
+    u = ysap.getUpdate("TD_ADD_PROPERTY", {
+        "thingDescURI": " <%s> " % thingDescURI,
+        "propertyURI": " <%s> " % wlPropertyURI,
+        "propertyName": " '%s' " % wlPropertyName,
+        "propertyData": " <%s> " % wlPropertyData,
+        "dataSchema": " <%s> " % wlPropDataSchema,
+        "propertyValue": " '%s' " % 0
+    })
+    kp.update(ysap.updateURI, u)
+        
     ##############################################################
     #
     # Subscribe to actions

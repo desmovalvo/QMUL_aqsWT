@@ -7,7 +7,7 @@ import logging
 import requests
 
 # constants
-NAMESEARCH_URL = "http://freesound.org/apiv2/search/text/?query=%s&token=%s&fields=id,url,download,name,previews&page=1&page_size=3"
+NAMESEARCH_URL = "http://freesound.org/apiv2/search/text/?query=%s&token=%s&fields=id,url,download,name,previews&page=1&page_size=6"
 
 class FSHandler:
 
