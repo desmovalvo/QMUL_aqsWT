@@ -15,7 +15,7 @@ from termcolor import colored
 
 class ActHandler:
 
-    def __init__(self, kp, ysap, clientID):
+    def __init__(self, kp, ysap):
 
         # logger
         logger = logging.getLogger('sonicWT')
@@ -24,7 +24,6 @@ class ActHandler:
 
         # attributes
         self.maxThreads = 5
-        self.clientID = clientID
         self.counter = 0
         self.ysap = ysap
         self.kp = kp

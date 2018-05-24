@@ -33,11 +33,6 @@ if __name__ == "__main__":
     kp = SEPAClient(None, 40)
     ysap = YSAPObject(CONFIG_FILE, 40)
 
-    # read freesound key
-    config = configparser.ConfigParser()
-    config.read("sonic.conf")
-    clientID = config["Freesound"]["clientId"]
-    
     ##############################################################
     #
     # Put TD into SEPA
@@ -122,7 +117,7 @@ if __name__ == "__main__":
                             {"thingURI": " <%s> " % thingURI,
                              "thingDescURI": " <%s> " % thingDescURI,
                              "actionURI": " <%s> " % actionURI })
-    kp.subscribe(ysap.subscribeURI, subText, "actions", ActHandler(kp, ysap, clientID))
+    kp.subscribe(ysap.subscribeURI, subText, "actions", ActHandler(kp, ysap))
 
     # 8 - wait, then destroy data
     logging.info("WebThing ready! Waiting for actions!")
