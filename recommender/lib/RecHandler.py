@@ -163,6 +163,8 @@ class RecHandler:
                 # preliminary stuff
                 #
                 ##########################################
+
+                print(a)
                 
                 # save instance uri and in/out fields
                 instanceURI = a["actionInstance"]["value"]
@@ -172,9 +174,9 @@ class RecHandler:
                 # the request contains also the song for which the recommendation is requested
                 # so we need to map this song into SEPA
                 song = json.loads(a["inValue"]["value"])
-                audioFile = song["details"]["previews"]["preview-lq-ogg"]
-                audioClip = song["details"]["url"]
-                name = song["details"]["name"]
+                audioFile = song["audioUri"]
+                audioClip = song["audioClip"]
+                name = song["name"]
                 
                 updText = """PREFIX ac:    <http://audiocommons.org/ns/audiocommons#> 
                 PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
@@ -243,7 +245,7 @@ class RecHandler:
                 # discover the best sonic instance
                 qText = self.ysap.getQuery("BEST_SONIC_INSTANCE", {})
                 status, res = self.kp.query(self.ysap.queryURI, qText)
-                action = res["results"]["bindings"][0]["action"]["value"]
+                action = "http://eecs.qmul.ac.uk/wot#execVampPlugin" #res["results"]["bindings"][0]["action"]["value"]
                 
                 # invoke sonic annotator web thing
                 logging.debug("Invoking Sonic Annotator Web Thing")                

@@ -48,7 +48,7 @@ class JamHandler:
         else:
             
             # debug message
-            if added > 0:
+            if len(added) > 0:
                 logging.debug("Search request #%s" % self.counter)
             
             # cycle over added bindings
@@ -107,7 +107,6 @@ class JamHandler:
                 
                 response = requests.post('http://localhost:5000/sparqlgen', data={"query":query})
                 sg_res = json.loads(response.text)
-                print(sg_res["result"])
 
                 triples = []
                 g = rdflib.Graph()
@@ -121,7 +120,7 @@ class JamHandler:
                             triple_string += " _:%s " % field
                         else:
                             triple_string += " '%s' " % field
-                    triples.append(triple_string)                
+                    triples.append(triple_string)
 
                 ##############################################################
                 #

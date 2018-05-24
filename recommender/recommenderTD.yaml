@@ -1,10 +1,10 @@
 parameters:
-  host: "localhost"
+  host: "wot.arces.unibo.it"
   ports: 
-    http: 8000
-    https: 8443
-    ws: 9000
-    wss: 9443
+    http: 8027
+    https: 8447
+    ws: 9027
+    wss: 9447
   paths: 
     query: "/query"
     update: "/update"

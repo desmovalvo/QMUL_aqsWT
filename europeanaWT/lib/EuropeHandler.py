@@ -111,7 +111,7 @@ class EuropeHandler:
                 
                 response = requests.post('http://localhost:5000/sparqlgen', data={"query":query})
                 sg_res = json.loads(response.text)
-                print(sg_res["result"])
+                print(sg_res)
 
                 g = rdflib.Graph()
                 g.parse(data=sg_res["result"], format="n3")
@@ -124,8 +124,8 @@ class EuropeHandler:
                             triple_string += " _:%s " % field
                         else:
                             triple_string += " '%s' " % field.replace("'", "\\'")
-                    triples.append(triple_string)
-                
+                    triples.append(triple_string)                
+                    
             # put results into SEPA
             if len(removed) == 0:
                 tl = ".".join(triples)
@@ -133,7 +133,6 @@ class EuropeHandler:
                                               { "graphURI": " <%s> " % outputGraph,
                                                 "instanceURI": " <%s> " % instanceURI,
                                                 "tripleList": tl })
-                print(updText)
                 self.kp.update(self.ysap.updateURI, updText)                                               
                 logging.info("Task completed!")
                 

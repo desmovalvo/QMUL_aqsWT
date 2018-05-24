@@ -118,7 +118,7 @@ class FSHandler:
                         elif isinstance(field, rdflib.term.BNode):
                             triple_string += " _:%s " % field
                         else:
-                            triple_string += " '%s' " % field
+                            triple_string += " '%s' " % field.replace("'", "\\'")
                     triples.append(triple_string)
                 
             # put results into SEPA
@@ -128,7 +128,8 @@ class FSHandler:
                                               { "graphURI": " <%s> " % outputGraph,
                                                 "instanceURI": " <%s> " % instanceURI,
                                                 "tripleList": tl })
-                self.kp.update(self.ysap.updateURI, updText)                                               
+                self.kp.update(self.ysap.updateURI, updText)
+                print(updText)
                 logging.info("Task completed!")
                 
                 
