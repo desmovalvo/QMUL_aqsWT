@@ -1,9 +1,9 @@
 parameters:
   host: "wot.arces.unibo.it"
   ports: 
-    http: 8027
+    http: 8000
     https: 8447
-    ws: 9027
+    ws: 9000
     wss: 9447
   paths: 
     query: "/query"
@@ -44,17 +44,7 @@ updates:
              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
              PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
              PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
-             DELETE {
-               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
-               ?propertyURI rdf:type wot:Property .
-               ?propertyURI wot:hasName ?propertyName .
-               ?propertyURI wot:hasDataSchema ?dataSchema .
-               ?dataSchema rdf:type wot:FieldSchema .
-               ?dataSchema rdf:type xsd:string .               
-               ?propertyURI wot:hasData ?propertyData .
-               ?propertyData dul:hasDataValue ?oldValue .
-             }
-             INSERT {
+             INSERT DATA {
                ?thingDescURI wot:hasInteractionPattern ?propertyURI .
                ?propertyURI rdf:type wot:Property .
                ?propertyURI wot:hasName ?propertyName .
@@ -63,15 +53,6 @@ updates:
                ?dataSchema rdf:type xsd:string .               
                ?propertyURI wot:hasData ?propertyData .
                ?propertyData dul:hasDataValue ?propertyValue .
-            } WHERE {
-               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
-               ?propertyURI rdf:type wot:Property .
-               ?propertyURI wot:hasName ?propertyName .
-               ?propertyURI wot:hasDataSchema ?dataSchema .
-               ?dataSchema rdf:type wot:FieldSchema .
-               ?dataSchema rdf:type xsd:string .               
-               ?propertyURI wot:hasData ?propertyData .
-               ?propertyData dul:hasDataValue ?oldValue .
             }"
     forcedBindings:
       thingDescURI: "uri"
@@ -127,6 +108,38 @@ updates:
       inDataSchema: "uri"
       outDataSchema: "uri"
 
+  TD_DELETE_PROPERTY:
+    sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             DELETE {
+               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+               ?propertyURI rdf:type wot:Property .
+               ?propertyURI wot:hasName ?propertyName .
+               ?propertyURI wot:hasDataSchema ?dataSchema .
+               ?dataSchema rdf:type wot:FieldSchema .
+               ?dataSchema rdf:type xsd:string .               
+               ?propertyURI wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?propertyValue .
+            } WHERE {
+               ?thingDescURI wot:hasInteractionPattern ?propertyURI .
+               ?propertyURI rdf:type wot:Property .
+               ?propertyURI wot:hasName ?propertyName .
+               ?propertyURI wot:hasDataSchema ?dataSchema .
+               ?dataSchema rdf:type wot:FieldSchema .
+               ?dataSchema rdf:type xsd:string .               
+               ?propertyURI wot:hasData ?propertyData .
+               ?propertyData dul:hasDataValue ?propertyValue .
+            }"
+    forcedBindings:
+      thingDescURI: "uri"
+      propertyURI: "uri"
+      propertyName: "literal"
+      propertyData: "uri"
+      dataSchema: "uri"
+      
   TD_DELETE_ACTION_GRAPH_INPUT_GRAPH_OUTPUT:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
              PREFIX wot: <http://wot.arces.unibo.it/sepa#>

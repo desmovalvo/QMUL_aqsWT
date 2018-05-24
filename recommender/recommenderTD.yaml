@@ -1,9 +1,9 @@
 parameters:
   host: "wot.arces.unibo.it"
   ports: 
-    http: 8027
+    http: 8000
     https: 8447
-    ws: 9027
+    ws: 9000
     wss: 9447
   paths: 
     query: "/query"

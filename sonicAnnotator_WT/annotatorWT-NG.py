@@ -128,6 +128,16 @@ if __name__ == "__main__":
     finally:
         logging.debug("Closing WebThing")
 
+        # delete properties
+        u = ysap.getUpdate("TD_DELETE_PROPERTY", {
+        "thingDescURI": " <%s> " % thingDescURI,
+        "propertyURI": " <%s> " % wlPropertyURI,
+        "propertyName": " '%s' " % wlPropertyName,
+        "propertyData": " <%s> " % wlPropertyData,
+        "dataSchema": " <%s> " % wlPropDataSchema,
+        })
+        kp.update(ysap.updateURI, u)
+        
         # delete actions
         u = ysap.getUpdate("TD_DELETE_ACTION_GRAPH_INPUT_GRAPH_OUTPUT", {
             "thingDescURI": " <%s> " % thingDescURI,
