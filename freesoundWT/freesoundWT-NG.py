@@ -34,7 +34,10 @@ if __name__ == "__main__":
     kp = SEPAClient(None, 40)
 
     # create an YSAPObject
-    ysap = YSAPObject("freesoundTD.yaml", 40)
+    if len(sys.argv) < 2:
+        sys.exit("You need to specify a yaml configuration file!")
+    yamlFile = sys.argv[1]
+    ysap = YSAPObject(yamlFile, 40)
 
     # read the qmul namespace
     qmul = ysap.getNamespace("qmul")
