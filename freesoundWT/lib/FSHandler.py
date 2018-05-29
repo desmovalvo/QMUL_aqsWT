@@ -47,9 +47,6 @@ class FSHandler:
         ##############################################################    
             
         else:
-            
-            # debug message
-            logging.info("Search request #%s" % self.counter)
 
             # cycle over added bindings to check that all the notifications
             # belongs to the same action instance
@@ -59,76 +56,82 @@ class FSHandler:
                 if not instanceURI in instances:
                     instances[instanceURI] = []
                 instances[instanceURI] = a                
-            
-            # cycle over added bindings
-            triples = []
-            instanceURI = None
-            outputGraph = None
-            for a in added:
 
-                ##############################################################
-                #
-                # read the input
-                #
-                ##############################################################    
+            # cycle over instances:
+            for instance in instances:
+        
+                # debug message
+                logging.info("Search request #%s" % self.counter)
                 
-                # read the action configuration
-                # inValue is a string containing tags
-                # outValue is the URI for a graph
-                instanceURI = a["actionInstance"]["value"]
-                inputData = json.loads(a["inValue"]["value"])
-                outputGraph = a["outValue"]["value"]
-                logging.info("Action output will be in %s" % outputGraph)
-
-                ##############################################################
-                #
-                # search on freesound
-                #
-                ##############################################################    
-            
-                searchPattern = "+".join(inputData["tags"])
-                try:
-                    logging.info("Asking Freesound for songs matching %s" % searchPattern)
-                    r = requests.get(NAMESEARCH_URL % (searchPattern, self.clientID), timeout=15)
-                except ConnectionError:
-                    logging.error("Connection to Freesound failed")
-                    break
+                # cycle over added bindings
+                triples = []
+                outputGraph = None
+                for a in instances[instance]:
+    
+                    ##############################################################
+                    #
+                    # read the input
+                    #
+                    ##############################################################    
                     
-                res = json.loads(r.text)
-                logging.info("Freesound says:")
-                for r in res["results"]:
-                    logging.info(r["name"])
-
-                ##############################################################
-                #
-                # SPARQL-generate
-                #
-                ##############################################################    
+                    # read the action configuration
+                    # inValue is a string containing tags
+                    # outValue is the URI for a graph
+                    inputData = json.loads(a["inValue"]["value"])
+                    outputGraph = a["outValue"]["value"]
+                    logging.info("Action output will be in %s" % outputGraph)
+    
+                    ##############################################################
+                    #
+                    # search on freesound
+                    #
+                    ##############################################################    
+                
+                    searchPattern = "+".join(inputData["tags"])
+                    try:
+                        logging.info("Asking Freesound for songs matching %s" % searchPattern)
+                        r = requests.get(NAMESEARCH_URL % (searchPattern, self.clientID), timeout=15)
+                    except ConnectionError:
+                        logging.error("Connection to Freesound failed")
+                        break
+                        
+                    res = json.loads(r.text)
+                    logging.info("Freesound says:")
+                    if len(res["results"]) > 0:
+                        for r in res["results"]:
+                            logging.info(r["name"])
+                    else:
+                        logging.info("...no results!")
+                            
+                    ##############################################################
+                    #
+                    # SPARQL-generate
+                    #
+                    ##############################################################    
+                        
+                    # contacting the sparql generate server
+                    searchuri = NAMESEARCH_URL % (searchPattern, self.clientID)
+                    qText = self.ysap.getQuery("SPARQL_GENERATE_CONVERSION", {"searchURI": searchuri})
+                    try:
+                        response = requests.post('http://localhost:5000/sparqlgen', data={"query":qText}, timeout=15)
+                    except ConnectionError:
+                        logging.error("Connection to SPARQL-generate server failed")
+                        break
+    
+                    sg_res = json.loads(response.text)
+                    triples.append(getTripleListFromN3(sg_res["results"]))
+    
                     
-                # contacting the sparql generate server
-                searchuri = NAMESEARCH_URL % (searchPattern, self.clientID)
-                qText = self.ysap.getQuery("SPARQL_GENERATE_CONVERSION", {"searchURI": searchuri})
-                try:
-                    response = requests.post('http://localhost:5000/sparqlgen', data={"query":qText}, timeout=15)
-                except ConnectionError:
-                    logging.error("Connection to SPARQL-generate server failed")
-                    break
-
-                sg_res = json.loads(response.text)
-                triples.append(getTripleListFromN3(sg_res["results"]))
-
-                
-            # put results into SEPA
-            if len(added) > 0:
-                tl = ".".join(triples)
-                updText = self.ysap.getUpdate("INSERT_SEARCH_RESPONSE",
-                                              { "graphURI": " <%s> " % outputGraph,
-                                                "instanceURI": " <%s> " % instanceURI,
-                                                "tripleList": tl })
-                self.kp.update(self.ysap.updateURI, updText)
-                print(updText)
-                logging.info("Task completed!")
+                # put results into SEPA
+                if len(instances[instanceURI]) > 0:
+                    tl = ".".join(triples)
+                    updText = self.ysap.getUpdate("INSERT_SEARCH_RESPONSE",
+                                                  { "graphURI": " <%s> " % outputGraph,
+                                                    "instanceURI": " <%s> " % instance,
+                                                    "tripleList": tl })
+                    self.kp.update(self.ysap.updateURI, updText)
+                    logging.info("Task completed!")
                 
                 
-        # increment counter
-        self.counter += 1
+                # increment counter
+                self.counter += 1
