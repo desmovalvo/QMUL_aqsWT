@@ -1,5 +1,5 @@
 parameters:
-  host: "wot.arces.unibo.it"
+  host: "localhost"
   ports: 
     http: 8000
     https: 8447
@@ -285,19 +285,26 @@ queries:
              PREFIX mo: <http://purl.org/ontology/mo/>	
              PREFIX af: <http://purl.org/ontology/af/>
              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+             PREFIX qmul: <http://eecs.qmul.ac.uk/wot#>
              PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>     
              PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rec: <http://purl.org/ontology/rec/core#>
-             SELECT ?action WHERE { 
+             SELECT ?action ?pingValue WHERE { 
                ?thing rdf:type wot:Thing .
                ?thing wot:hasTD ?td .
-               ?td wot:hasInteractionPattern ?property .
-               ?property rdf:type wot:Property .
-               ?property wot:hasName 'Workload' .
-               ?property wot:hasData ?propertyData .
-               ?propertyData dul:hasDataValue ?value .
+               ?td wot:hasInteractionPattern ?wlProperty .
+               ?wlProperty rdf:type wot:Property .
+               ?wlProperty rdf:type qmul:Workload .
+               ?wlProperty wot:hasData ?wlPropertyData .
+               ?wlPropertyData dul:hasDataValue ?wlValue .
+               ?td wot:hasInteractionPattern ?pingProperty .
+               ?pingProperty rdf:type wot:Property .
+               ?pingProperty rdf:type qmul:Ping .
+               ?pingProperty wot:hasData ?pingPropertyData .
+               ?pingPropertyData dul:hasDataValue ?pingValue .
                ?td wot:hasInteractionPattern ?action .
-               ?action wot:hasName 'Exec Vamp Plugin' .
-             } ORDER BY DESC(?value) LIMIT 1"
+               ?action rdf:type wot:Action .
+               ?action rdf:type qmul:VampPlugin
+             } ORDER BY DESC(?wlValue)"
   
   ACTION_REQUESTS:
     sparql: "PREFIX wot: <http://wot.arces.unibo.it/sepa#>
@@ -330,9 +337,11 @@ queries:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
              PREFIX wot: <http://wot.arces.unibo.it/sepa#>
              PREFIX qmul: <http://eecs.qmul.ac.uk/wot#>
-             SELECT ?thing
+             SELECT ?thing ?action
              WHERE {
                ?thing wot:hasTD ?thingDescURI .
                ?thingDescURI rdf:type wot:ThingDescription .
-               ?thingDescURI wot:hasInteractionPattern qmul:searchAction
+               ?thingDescURI wot:hasInteractionPattern ?action .
+               ?action rdf:type wot:Action .
+               ?action rdf:type qmul:SearchByTags
              }"

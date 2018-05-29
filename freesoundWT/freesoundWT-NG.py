@@ -47,14 +47,14 @@ if __name__ == "__main__":
     thingURI = getRandomURI(qmul)
     thingDescURI = getRandomURI(qmul)
 
-    # ...for the action
+    # ...for the search action
     actionURI = getRandomURI(qmul)
     actionComment = "Search on Freesound"
     actionName = "searchByTags"
     inDataSchemaURI = getRandomURI(qmul)
     outDataSchemaURI = getRandomURI(qmul)
 
-    # ...for the properties
+    # ...for the ping property
     pingPropName = "Ping"
     pingPropURI = getRandomURI(qmul)
     pingPropData = getRandomURI(qmul)
@@ -78,11 +78,12 @@ if __name__ == "__main__":
         "pingPropURI": " <%s> " % pingPropURI,
         "pingPropName": " '%s' " % pingPropName,
         "pingPropData": " <%s> " % pingPropData,
-        "pingPropDataSchema": " <%s> " % pingPropDataSchema
+        "pingPropDataSchema": " <%s> " % pingPropDataSchema,
+        "pingPropValue": " '%s' " % str(time.time())
     }
     updText = ysap.getUpdate("THING_DESCRIPTION_UP", fb)
     kp.update(ysap.updateURI, updText)
-
+    logging.info("Pushed thing description. Thing URI: %s" % thingURI)
     
     ##############################################################
     #

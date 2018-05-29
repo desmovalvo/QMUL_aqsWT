@@ -1,12 +1,15 @@
 #!/usr/bin/python3
 
-# reqs
+# global reqs
 from sepy.SEPAClient import *
 from sepy.YSAPObject import *
 from lib.JamHandler import *
 import configparser
 import logging
-            
+
+# local reqs
+from lib.utilities import *
+
 # main
 if __name__ == "__main__":
 
@@ -31,18 +34,30 @@ if __name__ == "__main__":
     kp = SEPAClient(None, 40)
 
     # create an YSAPObject
-    ysap = YSAPObject("jamendoTD.yaml", 40)
+    if len(sys.argv) < 2:
+        sys.exit("You need to specify a yaml configuration file!")
+    yamlFile = sys.argv[1]
+    ysap = YSAPObject(yamlFile, 40)
     
-    # create URIs for
-    # - thing
-    # - thingDescription
-    # - search action
-    # - search action input and output dataschema
-    thingURI = ysap.getNamespace("qmul") + "JamendoWT"
-    thingDescURI = ysap.getNamespace("qmul") + "JamendoWT_TD"
-    actionURI = ysap.getNamespace("qmul") + "searchAction"
-    indataSchemaURI = ysap.getNamespace("qmul") + "searchAction_IDS"
-    outdataSchemaURI = ysap.getNamespace("qmul") + "searchAction_ODS"
+    # create URIs and Literals for
+    # 1 - thing and thingDescription
+    thingName = "Jamendo WT"
+    thingURI = getRandomURI(qmul) 
+    thingDescURI = getRandomURI(qmul)
+
+    # 2 - search action
+    actionName = "searchByTags"
+    actionURI = getRandomURI(qmul)
+    actionComment = "Search on Jamendo"
+    indataSchemaURI = getRandomURI(qmul)
+    outdataSchemaURI = getRandomURI(qmul)
+
+    # 2 - ping property
+    pingPropName = "Ping"
+    pingPropURI = getRandomURI(qmul)
+    pingPropData = getRandomURI(qmul)
+    pingPropDataSchema = getRandomURI(qmul)
+
 
     ##############################################################
     #
@@ -54,23 +69,18 @@ if __name__ == "__main__":
     updText = ysap.getUpdate("TD_INIT",
                              {"thingURI": " <%s> " % thingURI,
                               "thingDescURI": " <%s> " % thingDescURI,
-                              "thingName":" 'JamendoWT' "})
+                              "thingName":" ' <%s> ' " % thingName})
     kp.update(ysap.updateURI, updText)
     
     # get the second update (TD_ADD_ACTION_STRING_INPUT_GRAPH_OUTPUT)
     updText = ysap.getUpdate("TD_ADD_ACTION_STRING_INPUT_GRAPH_OUTPUT",
                              {"thingDescURI": " <%s> " % thingDescURI,
                               "actionURI": " <%s> " % actionURI,
-                              "actionName": " 'searchByTags' ",                              
+                              "actionName": " '<%s>' "  % actionName,                              
                               "inDataSchema": " <%s> " % indataSchemaURI,
                               "outDataSchema": " <%s> " % outdataSchemaURI,
-                              "actionComment": " 'Search song by tags' " })
+                              "actionComment": " '<%s>' " % actionComment })
     kp.update(ysap.updateURI, updText)
-        
-    # # remove existing action instances
-    # kp.update(updateURI, remove_actions.format(
-    #     actionURI = actionURI
-    # ))
 
     ##############################################################
     #

@@ -19,11 +19,12 @@ namespaces:
 updates:
 
   THING_DESCRIPTION_UP:
-    sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+    sparql: "PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>             
              PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX qmul:<http://eecs.qmul.ac.uk/wot#>             
              INSERT {
                ?thingURI rdf:type wot:Thing . 
                ?thingURI wot:hasName ?thingName . 
@@ -31,6 +32,7 @@ updates:
                ?thingDescURI rdf:type wot:ThingDescription .
                ?thingDescURI wot:hasInteractionPattern ?actionURI .
                ?actionURI rdf:type wot:Action .
+               ?actionURI rdf:type qmul:SearchByTags .
                ?actionURI wot:hasName ?actionName .
                ?actionURI rdfs:comment ?actionComment .
                ?actionURI wot:hasInputDataSchema ?inDataSchema .
@@ -41,6 +43,7 @@ updates:
                ?outDataSchema rdf:type rdfs:Resource .
                ?thingDescURI wot:hasInteractionPattern ?pingPropURI .
                ?pingPropURI rdf:type wot:Property .
+               ?pingPropURI rdf:type qmul:Ping .
                ?pingPropURI wot:hasName ?pingPropName .
                ?pingPropURI wot:hasDataSchema ?pingPropDataSchema .
                ?pingPropDataSchema rdf:type wot:FieldSchema .
@@ -66,11 +69,12 @@ updates:
       pingPropDataSchema: "uri"
 
   THING_DESCRIPTION_DOWN:
-    sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+    sparql: "PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>             
              PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-             PREFIX dul: <http://www.ontologydesignpatterns.org/ont/dul/DUL.owl#>
+             PREFIX wot: <http://wot.arces.unibo.it/sepa#>
+             PREFIX qmul:<http://eecs.qmul.ac.uk/wot#>             
              DELETE {
                ?thingURI rdf:type wot:Thing . 
                ?thingURI wot:hasName ?thingName . 
@@ -78,6 +82,7 @@ updates:
                ?thingDescURI rdf:type wot:ThingDescription .
                ?thingDescURI wot:hasInteractionPattern ?actionURI .
                ?actionURI rdf:type wot:Action .
+               ?actionURI rdf:type qmul:SearchByTags .
                ?actionURI wot:hasName ?actionName .
                ?actionURI rdfs:comment ?actionComment .
                ?actionURI wot:hasInputDataSchema ?inDataSchema .
@@ -88,6 +93,7 @@ updates:
                ?outDataSchema rdf:type rdfs:Resource .
                ?thingDescURI wot:hasInteractionPattern ?pingPropURI .
                ?pingPropURI rdf:type wot:Property .
+               ?pingPropURI rdf:type qmul:Ping .
                ?pingPropURI wot:hasName ?pingPropName .
                ?pingPropURI wot:hasDataSchema ?pingPropDataSchema .
                ?pingPropDataSchema rdf:type wot:FieldSchema .
@@ -120,10 +126,10 @@ updates:
                ?pingPropData dul:hasDataValue ?newPingPropValue }
              WHERE {
                ?pingPropData dul:hasDataValue ?pingPropValue .
-               BIND(now() as ?newPingPropValue)
              }"
     forcedBindings:
       pingPropData: "uri"
+      newPingPropValue: "literal"
 
   TD_DELETE_ACTION_STRING_INPUT_GRAPH_OUTPUT:
     sparql: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -304,3 +310,6 @@ queries:
               }'
     forcedBindings:
       ?searchURI: uri"
+
+extended:
+  sparqlGenURI: "http://localhost:5000/sparqlgen"
