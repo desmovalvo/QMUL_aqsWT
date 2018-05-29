@@ -1,3 +1,5 @@
+
+
 #!/usr/bin/python3
 
 # reqs
@@ -48,6 +50,15 @@ class FSHandler:
             
             # debug message
             logging.info("Search request #%s" % self.counter)
+
+            # cycle over added bindings to check that all the notifications
+            # belongs to the same action instance
+            instances = {}
+            for a in added:
+                instanceURI = a["actionInstance"]["value"]                
+                if not instanceURI in instances:
+                    instances[instanceURI] = []
+                instances[instanceURI] = a                
             
             # cycle over added bindings
             triples = []
@@ -76,50 +87,36 @@ class FSHandler:
                 ##############################################################    
             
                 searchPattern = "+".join(inputData["tags"])
-                r = requests.get(NAMESEARCH_URL % (searchPattern, self.clientID))
-                logging.info("Asking Freesound for songs matching %s" % searchPattern)
+                try:
+                    logging.info("Asking Freesound for songs matching %s" % searchPattern)
+                    r = requests.get(NAMESEARCH_URL % (searchPattern, self.clientID), timeout=15)
+                except ConnectionError:
+                    logging.error("Connection to Freesound failed")
+                    break
+                    
                 res = json.loads(r.text)
+                logging.info("Freesound says:")
                 for r in res["results"]:
                     logging.info(r["name"])
 
-                # experimental part -- contacting the local sparql generate server
-                searchuri = NAMESEARCH_URL % (searchPattern, self.clientID)   
-                query = """PREFIX ac: <http://audiocommons.org/ns/audiocommons#>
-                PREFIX dc: <http://purl.org/dc/elements/1.1/>
-                PREFIX iter: <http://w3id.org/sparql-generate/iter/>
-                PREFIX fn: <http://w3id.org/sparql-generate/fn/>
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>                
-                GENERATE { 
-                  ?audioClip rdf:type ac:AudioClip .
-                  ?audioClip ac:available_as ?audioFile .
-                  ?audioClip dc:title ?title .
-                  ?audioFile rdf:type ac:AudioFile
-                }
-                SOURCE <%s> AS ?source
-                ITERATOR iter:JSONPath(?source,"$..results[*]") AS ?res
-                WHERE {
-                BIND(fn:JSONPath(?res, ".id" ) AS ?id)
-                BIND(IRI(fn:JSONPath(?res, "url")) AS ?audioClip)
-                BIND(IRI(fn:JSONPath(?res, "previews.preview-lq-ogg")) AS ?audioFile)
-                BIND(fn:JSONPath(?res, "name") AS ?title)
-                }""" % searchuri
-                
-                response = requests.post('http://localhost:5000/sparqlgen', data={"query":query})
-                sg_res = json.loads(response.text)
-                print(sg_res["result"])
+                ##############################################################
+                #
+                # SPARQL-generate
+                #
+                ##############################################################    
+                    
+                # contacting the sparql generate server
+                searchuri = NAMESEARCH_URL % (searchPattern, self.clientID)
+                qText = self.ysap.getQuery("SPARQL_GENERATE_CONVERSION", {"searchURI": searchuri})
+                try:
+                    response = requests.post('http://localhost:5000/sparqlgen', data={"query":qText}, timeout=15)
+                except ConnectionError:
+                    logging.error("Connection to SPARQL-generate server failed")
+                    break
 
-                g = rdflib.Graph()
-                g.parse(data=sg_res["result"], format="n3")
-                for triple in g:
-                    triple_string = " "
-                    for field in triple:
-                        if isinstance(field, rdflib.term.URIRef):
-                            triple_string += " <%s> " % field
-                        elif isinstance(field, rdflib.term.BNode):
-                            triple_string += " _:%s " % field
-                        else:
-                            triple_string += " '%s' " % field.replace("'", "\\'")
-                    triples.append(triple_string)
+                sg_res = json.loads(response.text)
+                triples.append(getTripleListFromN3(sg_res["results"]))
+
                 
             # put results into SEPA
             if len(added) > 0:
