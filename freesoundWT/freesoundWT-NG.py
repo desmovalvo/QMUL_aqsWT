@@ -6,7 +6,11 @@ from sepy.YSAPObject import *
 from lib.FSHandler import *
 import configparser
 import logging
-            
+import threading
+
+# local reqs
+from lib.utilities import *
+
 # main
 if __name__ == "__main__":
 
@@ -25,52 +29,62 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("freesoundWT.conf")
     clientID = config["Freesound"]["clientId"]
-
+    
     # create a new KP
     kp = SEPAClient(None, 40)
 
     # create an YSAPObject
-    ysap = YSAPObject("freesoundTD.yaml", 40)
-    
-    # create URIs for
-    # - thing
-    # - thingDescription
-    # - search action
-    # - search action input and output dataschema
-    thingURI = ysap.getNamespace("qmul") + "FreesoundWT"
-    thingDescURI = ysap.getNamespace("qmul") + "FreesoundWT_TD"
-    actionURI = ysap.getNamespace("qmul") + "searchAction"
-    indataSchemaURI = ysap.getNamespace("qmul") + "searchAction_IDS"
-    outdataSchemaURI = ysap.getNamespace("qmul") + "searchAction_ODS"
+    if len(sys.argv) < 2:
+        sys.exit("You need to specify a yaml configuration file!")
+    yamlFile = sys.argv[1]
+    ysap = YSAPObject(yamlFile, 40)
 
+    # read the qmul namespace
+    qmul = ysap.getNamespace("qmul")
+    
+    # create URIs and Literals for the thing and its TD
+    thingName = "FreesoundWT"
+    thingURI = getRandomURI(qmul)
+    thingDescURI = getRandomURI(qmul)
+
+    # ...for the search action
+    actionURI = getRandomURI(qmul)
+    actionComment = "Search on Freesound"
+    actionName = "searchByTags"
+    inDataSchemaURI = getRandomURI(qmul)
+    outDataSchemaURI = getRandomURI(qmul)
+
+    # ...for the ping property
+    pingPropName = "Ping"
+    pingPropURI = getRandomURI(qmul)
+    pingPropData = getRandomURI(qmul)
+    pingPropDataSchema = getRandomURI(qmul)
+    
     ##############################################################
     #
     # Put the Thing Description into SEPA
     #
     ##############################################################
-    
-    # get the first update (TD_INIT)
-    updText = ysap.getUpdate("TD_INIT",
-                             {"thingURI": " <%s> " % thingURI,
-                              "thingDescURI": " <%s> " % thingDescURI,
-                              "thingName":" 'FreesoundWT' "})
-    kp.update(ysap.updateURI, updText)
-    
-    # get the second update (TD_ADD_ACTION_STRING_INPUT_GRAPH_OUTPUT)
-    updText = ysap.getUpdate("TD_ADD_ACTION_STRING_INPUT_GRAPH_OUTPUT",
-                             {"thingDescURI": " <%s> " % thingDescURI,
-                              "actionURI": " <%s> " % actionURI,
-                              "actionName": " 'searchByTags' ",                              
-                              "inDataSchema": " <%s> " % indataSchemaURI,
-                              "outDataSchema": " <%s> " % outdataSchemaURI,
-                              "actionComment": " 'Search song by tags' " })
-    kp.update(ysap.updateURI, updText)
-        
-    # # remove existing action instances
-    # kp.update(updateURI, remove_actions.format(
-    #     actionURI = actionURI
-    # ))
 
+    fb = {
+        "thingURI": " <%s> " % thingURI,
+        "thingDescURI": " <%s> " % thingDescURI,
+        "thingName":" '%s' " % thingName,
+        "actionURI": " <%s> " % actionURI,
+        "actionName": " '%s' " % actionName,
+        "actionComment": " '%s' " % actionComment,         
+        "inDataSchema": " <%s> " % inDataSchemaURI,
+        "outDataSchema": " <%s> " % outDataSchemaURI,
+        "pingPropURI": " <%s> " % pingPropURI,
+        "pingPropName": " '%s' " % pingPropName,
+        "pingPropData": " <%s> " % pingPropData,
+        "pingPropDataSchema": " <%s> " % pingPropDataSchema,
+        "pingPropValue": " '%s' " % str(time.time())
+    }
+    updText = ysap.getUpdate("THING_DESCRIPTION_UP", fb)
+    kp.update(ysap.updateURI, updText)
+    logging.info("Pushed thing description. Thing URI: %s" % thingURI)
+    
     ##############################################################
     #
     # Subscribe to actions
@@ -86,6 +100,16 @@ if __name__ == "__main__":
 
     ##############################################################
     #
+    # Start a Ping thread
+    #
+    ##############################################################    
+        
+    t = threading.Thread(target = pingWorker, args = (kp, ysap, pingPropData))
+    t.setDaemon(True)
+    t.start()
+    
+    ##############################################################
+    #
     # Wait for the end...
     #
     ##############################################################    
@@ -94,18 +118,27 @@ if __name__ == "__main__":
     try:
        input("Press <ENTER> to close the WebThing")
        logging.debug("Closing WebThing")
-
-       # delete action and instances
-       updText = ysap.getUpdate("TD_DELETE_ACTION_STRING_INPUT_GRAPH_OUTPUT",
-                                {"thingDescURI": " <%s> " % thingDescURI,
-                                 "actionURI": " <%s> " % actionURI,
-                                })
-       kp.update(ysap.updateURI, updText)
-       
-       # delete thing description
-       updText = ysap.getUpdate("TD_DELETE",
-                                {"thingURI": " <%s> " % thingURI})
-       kp.update(ysap.updateURI, updText)
        
     except KeyboardInterrupt:
        logging.debug("Closing WebThing")
+
+    finally:
+        
+       # delete the thing description
+       fb = {
+           "thingURI": " <%s> " % thingURI,
+           "thingDescURI": " <%s> " % thingDescURI,
+           "thingName":" '%s' " % thingName,
+           "actionURI": " <%s> " % actionURI,
+           "actionName": " '%s' " % actionName,
+           "actionComment": " '%s' " % actionComment,         
+           "inDataSchema": " <%s> " % inDataSchemaURI,
+           "outDataSchema": " <%s> " % outDataSchemaURI,
+           "pingPropURI": " <%s> " % pingPropURI,
+           "pingPropName": " '%s' " % pingPropName,
+           "pingPropData": " <%s> " % pingPropData,
+           "pingPropDataSchema": " <%s> " % pingPropDataSchema
+       }
+       updText = ysap.getUpdate("THING_DESCRIPTION_DOWN", fb)
+       kp.update(ysap.updateURI, updText)
+       

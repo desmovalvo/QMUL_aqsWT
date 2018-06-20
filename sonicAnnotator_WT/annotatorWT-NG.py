@@ -5,6 +5,7 @@ CONFIG_FILE = "annotatorTD.yaml"
 SONIC_ANN = ["sonic-annotator", "-l"]
 
 # global reqs
+import time
 import vamp
 import logging
 import subprocess
@@ -14,6 +15,7 @@ from sepy.SEPAClient import *
 
 # local reqs
 from lib.ActHandler import *
+from lib.utilities import *
 
 # main
 if __name__ == "__main__":
@@ -39,72 +41,83 @@ if __name__ == "__main__":
     #
     ##############################################################
     
-    # 2 - generate URIs
+    # generate URIs and literals for:
     logging.debug("Pushing Thing Description to SEPA")
-    
+
+    # 1 - thing and thing description
     thingName = "Sonic Annotator WT"
-    thingURI = ysap.namespaces["qmul"] + "SonicAnnotatorWT"
-    thingDescURI = ysap.namespaces["qmul"] + "SonicAnnotatorWT_TD"
+    thingURI = getRandomURI(ysap.namespaces["qmul"])
+    thingDescURI = getRandomURI(ysap.namespaces["qmul"])
 
-    actionURI = ysap.namespaces["qmul"] + "execVampPlugin"
+    # 2 - vamp plugin action
     actionName = "Exec Vamp Plugin"
+    actionURI = getRandomURI(ysap.namespaces["qmul"])
+    inDataSchema = getRandomURI(ysap.namespaces["qmul"])
+    outDataSchema = getRandomURI(ysap.namespaces["qmul"])
     actionComment = "Exploit Sonic Annotator to run VAMP plugin"
-    inDataSchema = ysap.namespaces["qmul"] + "inDS"
-    outDataSchema = ysap.namespaces["qmul"] + "outDS"
 
-    propertyURI = ysap.namespaces["qmul"] + "hasVampPlugin"
-    propertyName = "Vamp Plugin"
-    propertyData = ysap.namespaces["qmul"] + "propData"
-    propDataSchema = ysap.namespaces["qmul"] + "propDS"
+    # 3 - vamp plugin property
+    plugPropName = "Vamp Plugin"
+    plugPropURI = getRandomURI(ysap.namespaces["qmul"])
+    plugPropData = getRandomURI(ysap.namespaces["qmul"])
+    plugPropDataSchema = getRandomURI(ysap.namespaces["qmul"])
 
-    wlPropertyURI = ysap.namespaces["qmul"] + "hasWorkload"
-    wlPropertyName = "Workload"
-    wlPropertyData = ysap.namespaces["qmul"] + "propDataWL"
-    wlPropDataSchema = ysap.namespaces["qmul"] + "propDSWL"
+    # 4 - workload property
+    wlPropName = "Workload"
+    wlPropURI = getRandomURI(ysap.namespaces["qmul"]) 
+    wlPropData = getRandomURI(ysap.namespaces["qmul"])
+    wlPropDataSchema = getRandomURI(ysap.namespaces["qmul"])
 
-    
-    # 3 - init the web thing
-    u = ysap.getUpdate("TD_INIT", {
-        "thingName": " '%s' " % thingName,
+    # 5 - ping property
+    pingPropName = "Ping"
+    pingPropURI = getRandomURI(ysap.namespaces["qmul"])
+    pingPropData = getRandomURI(ysap.namespaces["qmul"])
+    pingPropDataSchema = getRandomURI(ysap.namespaces["qmul"])
+
+    # set the forced bindings
+    fb = {
         "thingURI": " <%s> " % thingURI,
-        "thingDescURI": " <%s> " % thingDescURI
-    })
-    kp.update(ysap.updateURI, u)
-
-    # 4 - add an action to the web thing
-    u = ysap.getUpdate("TD_ADD_ACTION_GRAPH_INPUT_GRAPH_OUTPUT", {
+        "thingName": " '%s' " % thingName,
         "thingDescURI": " <%s> " % thingDescURI,
+        "plugPropURI": " <%s> " % plugPropURI,
+        "plugPropData": " <%s> " % plugPropData,
+        "plugPropName": " '%s' " % plugPropName,
+        "plugPropValue": " '%s' " % ",".join(vamp.list_plugins()),
+        "plugPropDataSchema": " <%s> " % plugPropDataSchema,
+        "wlPropURI": " <%s> " % wlPropURI,
+        "wlPropData": " <%s> " % wlPropData,
+        "wlPropName": " '%s' " % wlPropName,
+        "wlPropValue": " '0' ",
+        "wlPropDataSchema": " <%s> " % wlPropDataSchema,
+        "pingPropURI": " <%s> " % pingPropURI,
+        "pingPropData": " <%s> " % pingPropData,
+        "pingPropName": " '%s' " % pingPropName,
+        "pingPropDataSchema": " <%s> " % pingPropDataSchema,
+        "pingPropValue": " '%s' " % str(time.time()),
         "actionURI": " <%s> " % actionURI,
         "actionName": " '%s' " % actionName,
         "actionComment": " '%s' " % actionComment,
         "inDataSchema": " <%s> " % inDataSchema,
-        "outDataSchema": " <%s> " % outDataSchema
-    })
-    kp.update(ysap.updateURI, u)
+        "outDataSchema": " <%s> " % outDataSchema,
+    }
 
-    # 5 - add a property for the vamp plugins
-    for plugin in vamp.list_plugins():
-        u = ysap.getUpdate("TD_ADD_PROPERTY", {
-            "thingDescURI": " <%s> " % thingDescURI,
-            "propertyURI": " <%s> " % propertyURI,
-            "propertyName": " '%s' " % propertyName,
-            "propertyData": " <%s> " % propertyData,
-            "dataSchema": " <%s> " % propDataSchema,
-            "propertyValue": " '%s' " % plugin
-        })
-        kp.update(ysap.updateURI, u)
-        
-    # 6 - add a property for the workload
-    u = ysap.getUpdate("TD_ADD_PROPERTY", {
-        "thingDescURI": " <%s> " % thingDescURI,
-        "propertyURI": " <%s> " % wlPropertyURI,
-        "propertyName": " '%s' " % wlPropertyName,
-        "propertyData": " <%s> " % wlPropertyData,
-        "dataSchema": " <%s> " % wlPropDataSchema,
-        "propertyValue": " '%s' " % 0
-    })
+    # push the thing description
+    u = ysap.getUpdate("THING_DESCRIPTION_UP", fb)
     kp.update(ysap.updateURI, u)
+    logging.debug("Thing URI: %s" % thingURI)
+
+    
+    ##############################################################
+    #
+    # Start a Ping thread
+    #
+    ##############################################################    
         
+    t = threading.Thread(target = pingWorker, args = (kp, ysap, pingPropData))
+    t.setDaemon(True)
+    t.start()
+
+    
     ##############################################################
     #
     # Subscribe to actions
@@ -128,27 +141,32 @@ if __name__ == "__main__":
     finally:
         logging.debug("Closing WebThing")
 
-        # delete properties
-        u = ysap.getUpdate("TD_DELETE_PROPERTY", {
-        "thingDescURI": " <%s> " % thingDescURI,
-        "propertyURI": " <%s> " % wlPropertyURI,
-        "propertyName": " '%s' " % wlPropertyName,
-        "propertyData": " <%s> " % wlPropertyData,
-        "dataSchema": " <%s> " % wlPropDataSchema,
-        })
-        kp.update(ysap.updateURI, u)
-        
-        # delete actions
-        u = ysap.getUpdate("TD_DELETE_ACTION_GRAPH_INPUT_GRAPH_OUTPUT", {
+        # set the forced bindings
+        fb = {
+            "thingURI": " <%s> " % thingURI,
+            "thingName": " '%s' " % thingName,
             "thingDescURI": " <%s> " % thingDescURI,
-            "actionURI": " <%s> " % actionURI
-        })
-        kp.update(ysap.updateURI, u)
-
-        # delete TD
-        u = ysap.getUpdate("TD_DELETE", {
-            "thingURI": " <%s> " % thingURI
-        })
-        kp.update(ysap.updateURI, u)
-
+            "plugPropURI": " <%s> " % plugPropURI,
+            "plugPropData": " <%s> " % plugPropData,
+            "plugPropName": " '%s' " % plugPropName,
+            "plugPropValue": " '%s' " % ",".join(vamp.list_plugins()),
+            "plugPropDataSchema": " <%s> " % plugPropDataSchema,
+            "wlPropURI": " <%s> " % wlPropURI,
+            "wlPropData": " <%s> " % wlPropData,
+            "wlPropName": " '%s' " % wlPropName,
+            "wlPropValue": " '0' ",
+            "wlPropDataSchema": " <%s> " % wlPropDataSchema,
+            "pingPropURI": " <%s> " % pingPropURI,
+            "pingPropData": " <%s> " % pingPropData,
+            "pingPropName": " '%s' " % pingPropName,
+            "pingPropDataSchema": " <%s> " % pingPropDataSchema,
+            "actionURI": " <%s> " % actionURI,
+            "actionName": " '%s' " % actionName,
+            "actionComment": " '%s' " % actionComment,
+            "inDataSchema": " <%s> " % inDataSchema,
+            "outDataSchema": " <%s> " % outDataSchema,
+        }
         
+        # delete the thing description
+        u = ysap.getUpdate("THING_DESCRIPTION_DOWN", fb)
+        kp.update(ysap.updateURI, u)
