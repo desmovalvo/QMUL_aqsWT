@@ -208,6 +208,7 @@ class RecHandler:
                 ###########################################
 
                 waiting = []
+                print(res)
                 for thing in search_things:
                 
                     # before invoking search web thing, we subscribe to its output
@@ -262,6 +263,7 @@ class RecHandler:
                 uText = self.ysap.getUpdate("TD_DETECT_SIMILARITIES", {"graphURI": " <%s> " % outValue,
                                                                        "refAudioFile": " <%s> " % audioFile})
                 self.kp.update(self.ysap.updateURI, uText)
+                logging.debug(uText)
 
                 # perform a SPARQL update with the timestamp
                 updText = self.ysap.getUpdate("INSERT_REC_RESPONSE", { "instanceURI": " <%s> " % instanceURI })

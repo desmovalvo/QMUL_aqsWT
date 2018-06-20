@@ -105,11 +105,13 @@ class FSHandler:
                 }""" % searchuri
                 
                 response = requests.post('http://localhost:5000/sparqlgen', data={"query":query})
-                sg_res = json.loads(response.text)
-                print(sg_res["result"])
+                # logging.debug(response.text)
+                # sg_res = json.loads(response.text)
+                # print(sg_res["result"])                
 
                 g = rdflib.Graph()
-                g.parse(data=sg_res["result"], format="n3")
+                # g.parse(data=sg_res["result"], format="n3")
+                g.parse(data=response.text, format="n3")
                 for triple in g:
                     triple_string = " "
                     for field in triple:
